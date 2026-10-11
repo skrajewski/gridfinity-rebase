@@ -43,8 +43,8 @@ def parser():
     rebase.add_argument(
         "--base-height",
         type=float,
-        default=4.75,
-        help="Replace this many mm from the bottom (default: 4.75)",
+        default=None,
+        help="Override automatic standard-bin base detection with an explicit height in mm",
     )
     rebase.add_argument("--overwrite", action="store_true")
     rebase.add_argument("--json", action="store_true")
@@ -66,7 +66,13 @@ def main(argv=None):
                 )
             )
             return 0
-        from .geometry import detect_grid, donor_base, replace_base, validate_height
+        from .geometry import (
+            detect_grid,
+            detect_standard_base,
+            donor_base,
+            replace_base,
+            validate_height,
+        )
         from .presets import preset_base
         from .stl import read_stl, write_stl
 
@@ -77,6 +83,15 @@ def main(argv=None):
             **grid.describe(),
             "triangles": solid.num_tri(),
         }
+        if args.command == "inspect" or args.base_height is None:
+            try:
+                standard = detect_standard_base(solid, grid, str(args.input))
+            except RebaseError as exc:
+                if args.command != "inspect":
+                    raise
+                report.update(standard_bin=False, base_detection_error=str(exc))
+            else:
+                report.update(standard.describe())
         if args.command == "rebase":
             output = args.output or args.input.with_name(
                 f"{args.input.stem}-rebased.stl"
@@ -86,29 +101,44 @@ def main(argv=None):
                 raise RebaseError("Output must differ from both source files")
             if output.exists() and not args.overwrite:
                 raise RebaseError(f"Output already exists: {output}; use --overwrite")
-            validate_height(solid, grid, args.base_height)
+            height = (
+                args.base_height if args.base_height is not None else standard.height
+            )
+            validate_height(solid, grid, height)
             if args.preset:
-                replacement = preset_base(
-                    args.preset, grid, args.base_height, args.segments
-                )
+                replacement = preset_base(args.preset, grid, height, args.segments)
             else:
                 donor = read_stl(args.base)
                 donor_grid = detect_grid(donor, str(args.base))
-                replacement = donor_base(donor, donor_grid, grid, args.base_height)
-            result = replace_base(solid, replacement, grid, args.base_height)
+                if args.base_height is None:
+                    donor_standard = detect_standard_base(
+                        donor, donor_grid, str(args.base)
+                    )
+                    if donor_standard.height < height - 0.001:
+                        raise RebaseError(
+                            f"Donor base ends at {donor_standard.height:g} mm, before the input's {height:g} mm cut; use a compatible donor or set --base-height explicitly"
+                        )
+                replacement = donor_base(donor, donor_grid, grid, height)
+            result = replace_base(solid, replacement, grid, height)
             triangles = write_stl(result, output, overwrite=args.overwrite)
             report.update(
                 output=str(output),
                 base=args.preset or str(args.base),
-                base_height_mm=args.base_height,
+                base_height_mm=height,
+                base_height_mode="manual" if args.base_height is not None else "auto",
                 triangles=triangles,
             )
         report["elapsed_ms"] = round((perf_counter() - start) * 1000, 2)
         if args.json:
             print(json.dumps(report))
         elif args.command == "inspect":
+            detail = (
+                f"standard bin, base cut {report['recommended_base_height_mm']:g} mm"
+                if report["standard_bin"]
+                else "custom model; explicit --base-height required"
+            )
             print(
-                f"Gridfinity {grid.nx}x{grid.ny}, {solid.num_tri():,} triangles ({report['elapsed_ms']:g} ms)"
+                f"Gridfinity {grid.nx}x{grid.ny}, {detail}, {solid.num_tri():,} triangles ({report['elapsed_ms']:g} ms)"
             )
         else:
             print(

@@ -5,59 +5,59 @@
   "results": [
     {
       "scenario": "example/plain",
-      "input_triangles": 4500,
-      "process_median_ms": 91.16,
-      "process_min_ms": 85.75,
-      "process_max_ms": 94.14,
-      "warm_engine_median_ms": 18.17
+      "input_triangles": 7472,
+      "process_median_ms": 101.38,
+      "process_min_ms": 100.03,
+      "process_max_ms": 102.86,
+      "warm_engine_median_ms": 38.26
     },
     {
       "scenario": "example/rebuilt",
-      "input_triangles": 4500,
-      "process_median_ms": 92.59,
-      "process_min_ms": 87.15,
-      "process_max_ms": 93.97,
-      "warm_engine_median_ms": 19.74
+      "input_triangles": 7472,
+      "process_median_ms": 108.53,
+      "process_min_ms": 107.69,
+      "process_max_ms": 111.91,
+      "warm_engine_median_ms": 40.16
     },
     {
       "scenario": "example/rebuilt-screws",
-      "input_triangles": 4500,
-      "process_median_ms": 100.99,
-      "process_min_ms": 98.37,
-      "process_max_ms": 102.6,
-      "warm_engine_median_ms": 23.87
+      "input_triangles": 7472,
+      "process_median_ms": 131.42,
+      "process_min_ms": 130.68,
+      "process_max_ms": 139.22,
+      "warm_engine_median_ms": 55.53
     },
     {
       "scenario": "example/refined",
-      "input_triangles": 4500,
-      "process_median_ms": 89.26,
-      "process_min_ms": 86.51,
-      "process_max_ms": 91.25,
-      "warm_engine_median_ms": 19.67
+      "input_triangles": 7472,
+      "process_median_ms": 108.46,
+      "process_min_ms": 108.0,
+      "process_max_ms": 109.67,
+      "warm_engine_median_ms": 39.41
     },
     {
       "scenario": "example/press-fit",
-      "input_triangles": 4500,
-      "process_median_ms": 88.32,
-      "process_min_ms": 87.14,
-      "process_max_ms": 90.37,
-      "warm_engine_median_ms": 19.25
+      "input_triangles": 7472,
+      "process_median_ms": 108.18,
+      "process_min_ms": 107.84,
+      "process_max_ms": 117.91,
+      "warm_engine_median_ms": 40.14
     },
     {
       "scenario": "example/donor",
-      "input_triangles": 4500,
-      "process_median_ms": 90.39,
-      "process_min_ms": 87.0,
-      "process_max_ms": 90.8,
-      "warm_engine_median_ms": 24.9
+      "input_triangles": 7472,
+      "process_median_ms": 107.02,
+      "process_min_ms": 105.84,
+      "process_max_ms": 108.47,
+      "warm_engine_median_ms": 43.12
     },
     {
       "scenario": "6x6/refined",
       "input_triangles": 58246,
-      "process_median_ms": 288.12,
-      "process_min_ms": 281.74,
-      "process_max_ms": 296.85,
-      "warm_engine_median_ms": 206.84
+      "process_median_ms": 258.19,
+      "process_min_ms": 257.55,
+      "process_max_ms": 279.54,
+      "warm_engine_median_ms": 177.69
     }
   ]
 }

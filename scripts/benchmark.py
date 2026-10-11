@@ -12,7 +12,13 @@ from time import perf_counter
 
 import manifold3d as m
 
-from gridfinity_rebase.geometry import Grid, detect_grid, donor_base, replace_base
+from gridfinity_rebase.geometry import (
+    Grid,
+    detect_grid,
+    detect_standard_base,
+    donor_base,
+    replace_base,
+)
 from gridfinity_rebase.presets import preset_base, rounded_prism
 from gridfinity_rebase.stl import read_stl, write_stl
 
@@ -40,7 +46,7 @@ def main():
     results = []
     with tempfile.TemporaryDirectory(prefix="gridfinity-bench-") as folder:
         folder = Path(folder)
-        example = ROOT / "tmp" / "test.stl"
+        example = ROOT / "tmp" / "gf_bin_1x1_h6_bin_v01.stl"
         if not example.exists():
             example = folder / "1x1.stl"
             write_stl(synthetic_bin(1, 1), example)
@@ -90,12 +96,15 @@ def main():
                 start = perf_counter()
                 solid = read_stl(source)
                 grid = detect_grid(solid)
+                height = detect_standard_base(solid, grid).height
                 if option[0] == "--preset":
-                    base = preset_base(option[1], grid)
+                    base = preset_base(option[1], grid, height)
                 else:
                     other = read_stl(option[1])
-                    base = donor_base(other, detect_grid(other), grid, 4.75)
-                result = replace_base(solid, base, grid)
+                    donor_grid = detect_grid(other)
+                    assert detect_standard_base(other, donor_grid).height >= height
+                    base = donor_base(other, donor_grid, grid, height)
+                result = replace_base(solid, base, grid, height)
                 write_stl(result, output, overwrite=True)
                 engine_times.append((perf_counter() - start) * 1000)
             results.append(

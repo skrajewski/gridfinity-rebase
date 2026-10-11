@@ -5,21 +5,23 @@ Manifold 3.5.4, NumPy 2.4.6. Każdy scenariusz uruchomiono 5 razy.
 
 Komenda: `uv run python scripts/benchmark.py --runs 5 --json`.
 Proces CLI uruchamiany jest jako osobny proces Pythona; pomiar obejmuje
-start, importy, odczyt, walidację, podmianę i zapis STL. Kolumna silnika
-obejmuje odczyt, walidację, podmianę i zapis po załadowaniu bibliotek,
+start, importy, odczyt, walidację, automatyczne rozpoznanie podstawy,
+podmianę i zapis STL. Kolumna silnika
+obejmuje odczyt, walidację, automatyczne rozpoznanie podstawy, podmianę
+i zapis po załadowaniu bibliotek,
 z pamięcią podręczną pojedynczej stopki. Pliki pozostają w cache systemu.
 
 | Scenariusz | Trójkąty wejścia | Cały proces, mediana | Silnik po rozgrzaniu, mediana |
 | --- | ---: | ---: | ---: |
-| example/plain | 4500 | 91.16 ms | 18.17 ms |
-| example/rebuilt | 4500 | 92.59 ms | 19.74 ms |
-| example/rebuilt-screws | 4500 | 100.99 ms | 23.87 ms |
-| example/refined | 4500 | 89.26 ms | 19.67 ms |
-| example/press-fit | 4500 | 88.32 ms | 19.25 ms |
-| example/donor | 4500 | 90.39 ms | 24.9 ms |
-| 6x6/refined | 58246 | 288.12 ms | 206.84 ms |
+| example/plain | 7472 | 101.38 ms | 38.26 ms |
+| example/rebuilt | 7472 | 108.53 ms | 40.16 ms |
+| example/rebuilt-screws | 7472 | 131.42 ms | 55.53 ms |
+| example/refined | 7472 | 108.46 ms | 39.41 ms |
+| example/press-fit | 7472 | 108.18 ms | 40.14 ms |
+| example/donor | 7472 | 107.02 ms | 43.12 ms |
+| 6x6/refined | 58246 | 258.19 ms | 177.69 ms |
 
-`example` to rzeczywisty `tmp/test.stl`; `6x6` to wygenerowany pojemnik
+`example` to referencyjny `tmp/gf_bin_1x1_h6_bin_v01.stl`; `6x6` to wygenerowany pojemnik
 z bocznymi kieszeniami na magnesy. Surowe minima/maksima i metadane są w
 [benchmark.json](benchmark.json). To wyniki lokalne, nie gwarancja czasu
 dla dowolnych modeli. Przy większych siatkach koszt rośnie z liczbą

@@ -9,6 +9,7 @@ from . import RebaseError
 
 PITCH = 42.0
 PROFILE_HEIGHT = 4.75
+BASE_HEIGHT = 7.0
 
 
 @dataclass(frozen=True)
@@ -123,6 +124,103 @@ def lower(solid, height):
     return solid.trim_by_plane((0, 0, -1), -height)
 
 
+@dataclass(frozen=True)
+class StandardBase:
+    height: float
+    interior_start: float | None = None
+
+    def describe(self):
+        return {
+            "standard_bin": True,
+            "recommended_base_height_mm": self.height,
+            "interior_start_mm": self.interior_start,
+            "nominal_base_height_mm": BASE_HEIGHT,
+        }
+
+
+def standard_outline(grid: Grid):
+    from .presets import rounded_ring
+
+    centre = (grid.x + (grid.nx - 1) * 21, grid.y + (grid.ny - 1) * 21)
+    ring = rounded_ring(grid.nx * PITCH - 0.5, grid.ny * PITCH - 0.5, 3.75, 64)
+    return m.CrossSection([ring + centre])
+
+
+def is_hardware_hole(poly, grid: Grid):
+    """Recognize circular corner bores and central thumbscrew bores only."""
+    points = np.asarray(poly)
+    low, high = points.min(axis=0), points.max(axis=0)
+    size = high - low
+    centre = (high + low) / 2
+    if abs(size[0] - size[1]) > 0.5:
+        return False
+    area = abs(signed_area(points))
+    if not 0.65 * size[0] * size[1] <= area <= 0.87 * size[0] * size[1]:
+        return False
+    i, j = np.rint((centre - (grid.x, grid.y)) / PITCH).astype(int)
+    if not (0 <= i < grid.nx and 0 <= j < grid.ny):
+        return False
+    offset = np.abs(centre - (grid.x + i * PITCH, grid.y + j * PITCH))
+    if np.max(size) <= 7.5 and np.max(np.abs(offset - 13)) <= 0.4:
+        return True
+    return bool(np.max(size) <= 16 and np.max(offset) <= 0.4)
+
+
+def detect_standard_base(solid, grid: Grid, label="Model") -> StandardBase:
+    """Recognize a standard full bridge up to 7 mm, stopping before the interior.
+
+    A small set of slices covers the nominal bridge; binary search refines
+    the first interior transition. Custom bases require an explicit height.
+    """
+    message = f"{label}: standard bin base not recognized; specify --base-height explicitly for a custom model"
+    if solid.bounding_box()[5] - grid.z <= BASE_HEIGHT + 0.1:
+        raise RebaseError(message)
+    envelope = standard_outline(grid)
+    expanded_envelope = envelope.offset(0.15)
+
+    def classify(height):
+        polygons = solid.slice(grid.z + height).to_polygons()
+        outers = [p for p in polygons if signed_area(p) > 0.02]
+        if len(outers) != 1:
+            return "outline"
+        outer = m.CrossSection(outers)
+        allowance = 0.25 * grid.nx * grid.ny
+        if (outer - expanded_envelope).area() > allowance or (
+            envelope - outer.offset(0.15)
+        ).area() > allowance:
+            return "outline"
+        for poly in polygons:
+            if signed_area(poly) < -0.02 and not is_hardware_hole(poly, grid):
+                return "interior"
+        return "base"
+
+    previous = PROFILE_HEIGHT + 0.05
+    if classify(previous) != "base":
+        raise RebaseError(message)
+    for height in (5.0, 5.5, 6.0, 6.5, BASE_HEIGHT):
+        kind = classify(height)
+        if kind == "outline":
+            raise RebaseError(message)
+        if kind == "interior":
+            low, high = previous, height
+            while high - low > 0.001:
+                middle = (low + high) / 2
+                kind = classify(middle)
+                if kind == "outline":
+                    raise RebaseError(message)
+                if kind == "base":
+                    low = middle
+                else:
+                    high = middle
+            # Keep a 0.02 mm margin below the first real interior contour.
+            safe_height = np.floor((low - 0.02) * 100) / 100
+            if safe_height < 5.0:
+                raise RebaseError(message)
+            return StandardBase(float(safe_height), round(high, 3))
+        previous = height
+    return StandardBase(BASE_HEIGHT)
+
+
 def donor_base(solid, donor: Grid, target: Grid, height: float):
     if solid.bounding_box()[5] < donor.z + height - 1e-5:
         raise RebaseError(
@@ -135,12 +233,41 @@ def donor_base(solid, donor: Grid, target: Grid, height: float):
         return base.rotate((0, 0, 90)).translate(
             (target.x + (target.nx - 1) * PITCH, target.y, target.z)
         )
-    if (donor.nx, donor.ny) == (1, 1) and height <= PROFILE_HEIGHT:
-        return m.Manifold.batch_boolean(
-            [base.translate((x, y, target.z)) for x, y in target.cells], m.OpType.Add
+    if (donor.nx, donor.ny) == (1, 1):
+        if height <= PROFILE_HEIGHT:
+            return m.Manifold.batch_boolean(
+                [base.translate((x, y, target.z)) for x, y in target.cells],
+                m.OpType.Add,
+            )
+        from .presets import rounded_prism
+
+        # Tile feet and hardware cutouts, then join them with a continuous
+        # standard bridge; copying whole 1x1 tiles would leave 0.5 mm slots.
+        feet = lower(base, PROFILE_HEIGHT)
+        donor_envelope = rounded_prism(41.5, 41.5, 3.75, PROFILE_HEIGHT, height)
+        cutouts = donor_envelope - base.trim_by_plane((0, 0, 1), PROFILE_HEIGHT)
+        bridge = rounded_prism(
+            target.nx * PITCH - 0.5,
+            target.ny * PITCH - 0.5,
+            3.75,
+            PROFILE_HEIGHT,
+            height,
+        ).translate(((target.nx - 1) * 21, (target.ny - 1) * 21, 0))
+        offsets = [
+            (i * PITCH, j * PITCH, 0)
+            for i in range(target.nx)
+            for j in range(target.ny)
+        ]
+        bridge = m.Manifold.batch_boolean(
+            [bridge, *(cutouts.translate(offset) for offset in offsets)],
+            m.OpType.Subtract,
         )
+        tiled = m.Manifold.batch_boolean(
+            [bridge, *(feet.translate(offset) for offset in offsets)], m.OpType.Add
+        )
+        return tiled.translate((target.x, target.y, target.z))
     raise RebaseError(
-        f"Donor grid {donor.nx}x{donor.ny} does not match input {target.nx}x{target.ny}; use a matching donor or 1x1 donor (up to 4.75 mm)"
+        f"Donor grid {donor.nx}x{donor.ny} does not match input {target.nx}x{target.ny}; use a matching donor or 1x1 donor"
     )
 
 
