@@ -41,6 +41,21 @@ def outer_boxes(solid, z):
     return boxes
 
 
+def nominal_section(width, centres):
+    # Some exported bins keep ~1.6 mm corner fillets through the upper
+    # chamfer instead of expanding them. Accept this common variant too.
+    radius = min((width - 34) / 2, 1.6)
+    contours = []
+    for cx, cy in centres:
+        points = []
+        for quadrant, (sx, sy) in enumerate([(1, 1), (-1, 1), (-1, -1), (1, -1)]):
+            angle = np.linspace(quadrant * np.pi / 2, (quadrant + 1) * np.pi / 2, 17)
+            points.extend(np.column_stack((cx + sx * (width / 2 - radius) + radius * np.cos(angle),
+                                           cy + sy * (width / 2 - radius) + radius * np.sin(angle))))
+        contours.append(points)
+    return m.CrossSection(contours)
+
+
 def detect_grid(solid: m.Manifold, label="Model", tolerance=0.35) -> Grid:
     """Require individual feet on a 42 mm lattice and all three profile stages."""
     z = solid.bounding_box()[2]
@@ -67,6 +82,10 @@ def detect_grid(solid: m.Manifold, label="Model", tolerance=0.35) -> Grid:
         for (low, high), centre in zip(sections, expected_centres):
             if np.max(np.abs(high - low - width)) > tolerance or np.max(np.abs((low + high) / 2 - centre)) > tolerance:
                 raise RebaseError(f"{label}: not Gridfinity: incorrect chamfer/profile at Z+{height:g} mm; expected {width:g} mm feet (mm, Z up)")
+        filled = m.CrossSection([p for p in solid.slice(z + height).to_polygons() if signed_area(p) > 0])
+        envelope = nominal_section(width, centres).offset(tolerance)
+        if (filled - envelope).area() > 0.25 * nx * ny:
+            raise RebaseError(f"{label}: not Gridfinity: feet do not have compatible rounded corners at Z+{height:g} mm")
     return Grid(nx, ny, float(origin[0]), float(origin[1]), float(z))
 
 
@@ -102,10 +121,20 @@ def replace_base(solid, replacement, grid: Grid, height=PROFILE_HEIGHT):
     if (replacement_section - original_section.offset(0.12)).area() > 0.2 * grid.nx * grid.ny:
         raise RebaseError("Replacement does not fit the input at the seam; choose a matching donor or a lower --base-height")
     upper = solid.trim_by_plane((0, 0, 1), seam)
+    # Plane trimming can leave cap coordinates a few ULPs off the plane.
+    # Snap only those coordinates, so exact face-to-face union stays connected.
+    def snap_cap(vertices):
+        vertices = vertices.copy()
+        vertices[np.abs(vertices[:, 2] - seam) < 1e-8, 2] = seam
+        return vertices
+
+    upper = upper.warp_batch(snap_cap)
+    replacement = replacement.warp_batch(snap_cap)
     result = upper + replacement
     if result.status() != m.Error.NoError or result.is_empty() or result.volume() <= 0:
         raise RebaseError(f"Replacement failed to produce a valid solid: {result.status().name}")
     # A single-body input must stay connected; all tiled feet must be attached.
-    if len(result.decompose()) > len(solid.decompose()):
+    # Negative-volume shells are enclosed cavities, not detached solids.
+    if sum(part.volume() > 0 for part in result.decompose()) > sum(part.volume() > 0 for part in solid.decompose()):
         raise RebaseError("Replacement would leave disconnected feet; check the donor and --base-height")
     return result
