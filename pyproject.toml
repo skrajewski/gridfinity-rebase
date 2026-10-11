@@ -7,6 +7,9 @@ name = "gridfinity-rebase"
 version = "0.1.0"
 description = "Fast, validated Gridfinity STL foot replacement"
 requires-python = ">=3.10"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 dependencies = ["numpy>=2.0,<3", "manifold3d>=3.5,<4"]
 
 [project.scripts]
@@ -16,6 +19,7 @@ gridfinity-rebase = "gridfinity_rebase.cli:main"
 dev = [
     "networkx>=3.4.2",
     "pytest>=8",
+    "ruff>=0.17.0",
     "trimesh>=4",
 ]
 

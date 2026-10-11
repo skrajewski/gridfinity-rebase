@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import manifold3d as m
+import numpy as np
 import pytest
 import trimesh
 
@@ -12,7 +13,9 @@ from gridfinity_rebase.stl import read_stl, write_stl
 EXAMPLES = Path(__file__).resolve().parents[1] / "tmp"
 
 
-@pytest.mark.skipif(not (EXAMPLES / "test.stl").exists(), reason="local user examples unavailable")
+@pytest.mark.skipif(
+    not (EXAMPLES / "test.stl").exists(), reason="local user examples unavailable"
+)
 def test_real_donor_preserves_body(tmp_path):
     source = read_stl(EXAMPLES / "test.stl")
     donor = read_stl(EXAMPLES / "test-rebased.stl")
@@ -72,3 +75,28 @@ def test_cli_rejects_non_gridfinity(tmp_path, capsys):
     write_stl(m.Manifold.cube((41.5, 41.5, 21)), path)
     assert main(["inspect", str(path), "--json"]) == 2
     assert "not Gridfinity" in capsys.readouterr().err
+
+
+@pytest.mark.skipif(
+    not (EXAMPLES / "test.stl").exists(), reason="local user examples unavailable"
+)
+@pytest.mark.parametrize("filename", ["test.stl", "test-rebased.stl"])
+@pytest.mark.parametrize(
+    "preset", ["standard", "rebuilt", "rebuilt-screws", "refined", "press-fit"]
+)
+def test_all_real_exports_remain_watertight_at_float32(filename, preset, tmp_path):
+    from gridfinity_rebase.presets import preset_base
+
+    source = read_stl(EXAMPLES / filename)
+    grid = detect_grid(source)
+    result = replace_base(source, preset_base(preset, grid), grid)
+    output = tmp_path / "result.stl"
+    count = write_stl(result, output)
+    mesh = trimesh.load_mesh(output)
+    assert count == len(mesh.faces)
+    assert mesh.is_watertight and mesh.is_winding_consistent
+    assert np.all(mesh.area_faces > 0)
+    assert sum(part.volume > 0 for part in mesh.split()) == 1
+    expected = source.trim_by_plane((0, 0, 1), grid.z + 4.7501)
+    exported = read_stl(output).trim_by_plane((0, 0, 1), grid.z + 4.7501)
+    assert (expected - exported).volume() + (exported - expected).volume() < 0.002

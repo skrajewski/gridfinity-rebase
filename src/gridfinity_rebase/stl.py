@@ -1,16 +1,19 @@
 """Vectorized binary STL I/O; no heavyweight mesh-processing imports."""
-from pathlib import Path
+
 import os
 import re
 import struct
 import tempfile
+from pathlib import Path
 
 import manifold3d as m
 import numpy as np
 
 from . import RebaseError
 
-FACET = np.dtype([("normal", "<f4", (3,)), ("vertices", "<f4", (3, 3)), ("attr", "<u2")])
+FACET = np.dtype(
+    [("normal", "<f4", (3,)), ("vertices", "<f4", (3, 3)), ("attr", "<u2")]
+)
 VERTEX = re.compile(rb"^\s*vertex\s+([^\r\n]+)", re.MULTILINE | re.IGNORECASE)
 
 
@@ -44,18 +47,28 @@ def read_stl(path: str | Path) -> m.Manifold:
     mesh.merge()
     solid = m.Manifold(mesh)
     if solid.status() != m.Error.NoError or solid.is_empty():
-        raise RebaseError(f"{path}: STL is not a closed, consistently oriented solid ({solid.status().name})")
+        raise RebaseError(
+            f"{path}: STL is not a closed, consistently oriented solid ({solid.status().name})"
+        )
     if solid.volume() <= 0:
         raise RebaseError(f"{path}: STL has inverted normals or non-positive volume")
     return solid
 
 
-def write_stl(solid: m.Manifold, path: str | Path, *, overwrite: bool = False) -> None:
+def write_stl(solid: m.Manifold, path: str | Path, *, overwrite: bool = False) -> int:
     """Publish a complete binary STL atomically; never truncate an existing file."""
     path = Path(path)
-    mesh = solid.to_mesh()
+    # STL stores float32 coordinates. Quantizing near-coincident boolean
+    # intersections can collapse tiny faces, so normalize at that precision
+    # before writing, retaining the original topology/merge information.
+    quantized = m.Manifold(solid.to_mesh())
+    if quantized.status() != m.Error.NoError or quantized.is_empty():
+        raise RebaseError("Cannot represent the result as a closed float32 STL")
+    mesh = quantized.to_mesh()
     triangles = np.asarray(mesh.vert_properties)[:, :3][mesh.tri_verts]
-    normals = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
+    normals = np.cross(
+        triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0]
+    )
     lengths = np.linalg.norm(normals, axis=1)
     normals /= np.where(lengths > 0, lengths, 1)[:, None]
     records = np.zeros(len(triangles), dtype=FACET)
@@ -65,7 +78,9 @@ def write_stl(solid: m.Manifold, path: str | Path, *, overwrite: bool = False) -
         raise RebaseError("Cannot export an empty or non-finite mesh")
     temporary = None
     try:
-        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=f".{path.name}.", delete=False) as out:
+        with tempfile.NamedTemporaryFile(
+            dir=path.parent, prefix=f".{path.name}.", delete=False
+        ) as out:
             temporary = Path(out.name)
             out.write(b"Gridfinity Rebase".ljust(80, b"\0"))
             out.write(struct.pack("<I", len(records)))
@@ -81,3 +96,4 @@ def write_stl(solid: m.Manifold, path: str | Path, *, overwrite: bool = False) -
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
+    return len(records)

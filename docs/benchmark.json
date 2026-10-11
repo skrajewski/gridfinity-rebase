@@ -1,0 +1,63 @@
+{
+  "platform": "macOS-26.2-arm64-arm-64bit",
+  "python": "3.11.14",
+  "runs": 5,
+  "results": [
+    {
+      "scenario": "example/standard",
+      "input_triangles": 4500,
+      "process_median_ms": 86.72,
+      "process_min_ms": 86.31,
+      "process_max_ms": 89.64,
+      "warm_engine_median_ms": 18.28
+    },
+    {
+      "scenario": "example/rebuilt",
+      "input_triangles": 4500,
+      "process_median_ms": 94.5,
+      "process_min_ms": 90.26,
+      "process_max_ms": 94.76,
+      "warm_engine_median_ms": 19.19
+    },
+    {
+      "scenario": "example/rebuilt-screws",
+      "input_triangles": 4500,
+      "process_median_ms": 106.41,
+      "process_min_ms": 101.57,
+      "process_max_ms": 107.57,
+      "warm_engine_median_ms": 24.14
+    },
+    {
+      "scenario": "example/refined",
+      "input_triangles": 4500,
+      "process_median_ms": 93.25,
+      "process_min_ms": 89.87,
+      "process_max_ms": 118.54,
+      "warm_engine_median_ms": 20.43
+    },
+    {
+      "scenario": "example/press-fit",
+      "input_triangles": 4500,
+      "process_median_ms": 93.29,
+      "process_min_ms": 91.65,
+      "process_max_ms": 99.25,
+      "warm_engine_median_ms": 19.98
+    },
+    {
+      "scenario": "example/donor",
+      "input_triangles": 4500,
+      "process_median_ms": 92.42,
+      "process_min_ms": 90.5,
+      "process_max_ms": 99.54,
+      "warm_engine_median_ms": 25.08
+    },
+    {
+      "scenario": "6x6/refined",
+      "input_triangles": 56806,
+      "process_median_ms": 296.69,
+      "process_min_ms": 281.11,
+      "process_max_ms": 307.95,
+      "warm_engine_median_ms": 206.21
+    }
+  ]
+}

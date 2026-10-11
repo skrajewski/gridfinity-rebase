@@ -1,4 +1,5 @@
 """Preset descriptions, kept importable without loading the geometry engine."""
+
 PRESETS = {
     "standard": "Standard mating foot, no magnet or screw holes",
     "rebuilt": "Rebuilt profile with 6.5 x 2.4 mm bottom magnet pockets (6 x 2 mm magnets)",
