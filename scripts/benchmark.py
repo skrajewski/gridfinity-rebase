@@ -51,7 +51,7 @@ def main():
         scenarios = [
             ("example/" + preset, example, ["--preset", preset])
             for preset in (
-                "standard",
+                "plain",
                 "rebuilt",
                 "rebuilt-screws",
                 "refined",

@@ -6,6 +6,7 @@ import pytest
 import trimesh
 
 from gridfinity_rebase import RebaseError
+from gridfinity_rebase.catalog import PRESETS
 from gridfinity_rebase.cli import main
 from gridfinity_rebase.geometry import detect_grid, donor_base, replace_base
 from gridfinity_rebase.stl import read_stl, write_stl
@@ -81,9 +82,7 @@ def test_cli_rejects_non_gridfinity(tmp_path, capsys):
     not (EXAMPLES / "test.stl").exists(), reason="local user examples unavailable"
 )
 @pytest.mark.parametrize("filename", ["test.stl", "test-rebased.stl"])
-@pytest.mark.parametrize(
-    "preset", ["standard", "rebuilt", "rebuilt-screws", "refined", "press-fit"]
-)
+@pytest.mark.parametrize("preset", list(PRESETS))
 def test_all_real_exports_remain_watertight_at_float32(filename, preset, tmp_path):
     from gridfinity_rebase.presets import preset_base
 

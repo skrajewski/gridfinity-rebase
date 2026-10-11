@@ -11,7 +11,7 @@ import manifold3d as m
 import numpy as np
 
 from . import RebaseError
-from .catalog import PRESETS
+from .catalog import ALIASES, PRESETS
 from .geometry import PITCH, PROFILE_HEIGHT, Grid
 
 
@@ -70,7 +70,7 @@ def cylinder(radius, bottom, top, segments):
     ).translate((0, 0, bottom))
 
 
-def refined_pocket(segments):
+def side_loading_pocket(segments):
     # Port of Rebuilt's refined_hole(): opening toward +X, bottom at 0.4.
     pocket = cylinder(2.93, 0.4, 2.3, segments) + m.Manifold.cube(
         (11, 5.86, 1.9)
@@ -88,10 +88,12 @@ def single_foot(preset, segments):
         ring = rounded_ring(width, width, radius, segments)
         rings.append(np.column_stack((ring, np.full(len(ring), z))))
     foot = loft_rings(rings)
-    if preset == "standard":
+    if preset == "plain":
         return foot
-    if preset == "refined":
-        hole = refined_pocket(segments)
+    if preset in ("rebuilt", "rebuilt-screws"):
+        hole = side_loading_pocket(segments)
+        if preset == "rebuilt-screws":
+            hole += cylinder(1.5, -0.01, PROFILE_HEIGHT + 0.01, segments)
     elif preset == "press-fit":
         angle = np.linspace(0, 2 * np.pi, segments, endpoint=False)
         radius = 3.1 + 0.15 * np.sin(8 * angle)
@@ -102,15 +104,11 @@ def single_foot(preset, segments):
             .extrude(2.41)
             .translate((0, 0, -0.01))
         )
-    else:
-        hole = cylinder(3.25, -0.01, 2.4, segments)
-        if preset == "rebuilt-screws":
-            hole += cylinder(1.5, -0.01, PROFILE_HEIGHT + 0.01, segments)
     holes = []
     for x in (-13, 13):
         for y in (-13, 13):
             oriented = hole
-            if preset == "refined":
+            if preset in ("rebuilt", "rebuilt-screws"):
                 # Both left and right openings point to the nearest outside edge.
                 oriented = hole.rotate((0, 0, 180 if x < 0 else 0))
             holes.append(oriented.translate((x, y, 0)))
@@ -120,6 +118,8 @@ def single_foot(preset, segments):
 def preset_base(preset: str, grid: Grid, height=PROFILE_HEIGHT, segments=64):
     if preset not in PRESETS:
         raise RebaseError(f"Unknown preset: {preset}")
+    # Resolve aliases before generating/caching geometry so they share a foot.
+    preset = ALIASES.get(preset, preset)
     if segments < 32 or segments > 256 or segments % 8:
         raise RebaseError("Segments must be a multiple of 8 between 32 and 256")
     parts = [

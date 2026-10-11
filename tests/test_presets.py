@@ -43,24 +43,49 @@ def test_every_preset_on_multiple_grids(preset, size, tmp_path):
     assert len(mesh.split()) == 1
 
 
-def test_hole_dimensions_and_refined_opening():
+@pytest.mark.parametrize("preset", ["rebuilt", "refined", "rebuilt-screws"])
+def test_side_loading_opening_and_screw_dimensions(preset):
     grid = Grid(1, 1, 0, 0, 0)
-    solid = preset_base("standard", grid)
-    classic = preset_base("rebuilt", grid)
-    assert solid.slice(1).area() - classic.slice(1).area() == pytest.approx(
-        4 * np.pi * 3.25**2, rel=0.002
-    )
-    assert solid.slice(2.41).area() == pytest.approx(classic.slice(2.41).area())
+    solid = preset_base("plain", grid)
+    base = preset_base(preset, grid)
     screw = preset_base("rebuilt-screws", grid)
     assert solid.slice(3).area() - screw.slice(3).area() == pytest.approx(
         4 * np.pi * 1.5**2, rel=0.002
     )
-    refined = preset_base("refined", grid)
-    assert refined.slice(2.31).area() == pytest.approx(solid.slice(2.31).area())
+    if preset != "rebuilt-screws":
+        assert base.slice(2.31).area() == pytest.approx(solid.slice(2.31).area())
+        # A floor retains the magnet below the side-loading pocket.
+        floor = m.Manifold.cube((1, 1, 0.2)).translate((12.5, 12.5, 0.1))
+        assert (base ^ floor).volume() == pytest.approx(0.2)
     # Side pocket intersects the +X outer side, while the bottom has a floor.
     probe = m.Manifold.cube((1, 2, 1)).translate((17.5, 12, 0.5))
-    assert (refined ^ probe).volume() < 1e-8
-    assert (classic ^ probe).volume() > 1.9
+    assert (base ^ probe).volume() < 1e-8
+    assert (solid ^ probe).volume() > 1.9
+    # 5.86 mm pocket width and 1.9 mm height, above a 0.4 mm floor.
+    cavity = m.Manifold.cube((0.5, 5.86, 1.9)).translate((13.25, 10.07, 0.4))
+    assert (base ^ cavity).volume() < 1e-8
+    wall = m.Manifold.cube((0.5, 0.2, 1)).translate((12.75, 15.95, 0.5))
+    assert (base ^ wall).volume() == pytest.approx(0.1)
+
+
+@pytest.mark.parametrize(
+    "alias,canonical", [("refined", "rebuilt"), ("standard", "plain")]
+)
+def test_aliases_export_identical_geometry(alias, canonical, tmp_path, capsys):
+    source = tmp_path / "input.stl"
+    write_stl(make_bin(), source)
+    outputs = []
+    for preset in (alias, canonical):
+        output = tmp_path / f"{preset}.stl"
+        assert (
+            main(
+                ["rebase", str(source), "--preset", preset, "-o", str(output), "--json"]
+            )
+            == 0
+        )
+        assert json.loads(capsys.readouterr().out)["base"] == preset
+        outputs.append(output.read_bytes())
+    assert outputs[0] == outputs[1]
 
 
 def test_tiled_donor_and_transposed_grid():

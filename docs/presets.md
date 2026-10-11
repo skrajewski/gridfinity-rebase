@@ -13,15 +13,20 @@ warianty opisane przez ich twórców, bez deklarowania rankingu pobrań.
 
 | Preset | Geometria |
 | --- | --- |
-| `standard` | Profil standardowy bez otworów. |
-| `rebuilt` | Profil Rebuilt i dolne kieszenie na magnesy; proste, bez żeber i bez dodatkowych mostków drukarskich. |
+| `plain` | Profil standardowy bez otworów na magnesy i śruby. |
+| `rebuilt` | Kieszenie z bocznym wsuwaniem magnesu, podłogą i otworem do wypchnięcia; otwarcia kierują się na lewo/prawo od środka stopki. |
 | `rebuilt-screws` | Jak `rebuilt`, dodatkowo otwory na śruby. Ich głębokość kończy się na wysokości cięcia, maksymalnie 7 mm. |
-| `refined` | Kieszenie z bocznym wsuwaniem magnesu, podłogą i otworem do wypchnięcia; otwarcia kierują się na lewo/prawo od środka stopki. |
 | `press-fit` | Dolne kieszenie z ośmioma żebrami zgniatanymi przy wciskaniu magnesu. |
+| `refined` | Alias `rebuilt`: identyczna geometria z bocznym wsuwaniem magnesów. |
+| `standard` | Alias `plain`: identyczna geometria bez otworów. |
 
-Nazwy oznaczają konkretne konfiguracje tego narzędzia. `rebuilt` nie jest
-kopią wszystkich aktualnych ustawień domyślnych Customizera upstream;
-`refined` nie dodaje centralnego otworu na thumbscrew. Wszystkie presety
+`rebuilt` i `refined` korzystają z tej samej geometrii bocznych kieszeni
+Rebuilt/Refined: szerokość 5,86 mm, wysokość 1,9 mm i podłoga 0,4 mm.
+`rebuilt-screws` używa tych samych kieszeni z dodatkowymi otworami na śruby.
+Starsze nazwy `refined` i `standard` pozostają obsługiwane jako aliasy.
+
+Nazwy oznaczają konkretne konfiguracje tego narzędzia, bez centralnego
+otworu na thumbscrew i pozostałych opcji Customizera upstream. Wszystkie presety
 zachowują ten sam profil współpracy z płytą bazową. Są generowane lokalnie,
 bez pobierania STL i bez uruchamiania OpenSCAD.
 

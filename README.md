@@ -41,7 +41,9 @@ uv run gridfinity-rebase presets
 uv run gridfinity-rebase inspect tmp/test.stl --json
 ```
 
-Dostępne presety: `standard`, `rebuilt`, `rebuilt-screws`, `refined`, `press-fit`.
+Dostępne presety: `plain`, `rebuilt`, `rebuilt-screws`, `press-fit`.
+`rebuilt` ma magnesy wsuwane z boku; `refined` jest jego aliasem.
+`plain` nie ma otworów na magnesy ani śruby; `standard` jest jego aliasem.
 Ich konfiguracje, źródła i kontekst popularności opisuje [docs/presets.md](docs/presets.md).
 
 Bez `-o` wynik trafia do `NAZWA-rebased.stl`. Istniejący wynik wymaga
@@ -113,8 +115,8 @@ przestrzenie, szczelność eksportu, wadliwe STL i bezpieczne zapisy. Gdy przyk�
 z `tmp` są dostępne, uruchamia się także regresja na rzeczywistych modelach.
 Benchmark mierzy osobno silnik oraz cały proces CLI (start Pythona, odczyt,
 walidacja, podmiana i zapis). Wyniki zależą od liczby trójkątów i komputera.
-W lokalnym pomiarze mediana dla `tmp/test.stl` wynosiła 87–106 ms, a dla
-modelu 6×6 z 56 806 trójkątami — 297 ms. Szczegóły, warunki pomiaru i
+W lokalnym pomiarze mediana dla `tmp/test.stl` wynosiła 88–101 ms, a dla
+modelu 6×6 z 58 246 trójkątami — 288 ms. Szczegóły, warunki pomiaru i
 surowe wyniki: [docs/performance.md](docs/performance.md).
 
 MIT. Atrybucja geometrii: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
