@@ -46,7 +46,10 @@ Dostępne presety: `plain`, `rebuilt`, `rebuilt-screws`, `press-fit`.
 `plain` nie ma otworów na magnesy ani śruby; `standard` jest jego aliasem.
 Ich konfiguracje, źródła i kontekst popularności opisuje [docs/presets.md](docs/presets.md).
 
-Bez `-o` wynik trafia do `NAZWA-rebased.stl`. Istniejący wynik wymaga
+Bez `-o` wynik z presetu trafia do `NAZWA-rebased-PRESET.stl`, np.
+`bin-rebased-plain.stl`. Użyta nazwa aliasu również trafia do nazwy pliku
+(np. `bin-rebased-refined.stl`). Przy podmianie z dawcy wynik trafia do
+`NAZWA-rebased.stl`. Jawne `-o` określa dokładną nazwę wyniku. Istniejący wynik wymaga
 `--overwrite`. CLI chroni pliki wejściowe, również kiedy podasz jeden z nich
 jako wynik. Zapisuje kompletny plik atomowo, po poprawnym zakończeniu obliczeń.
 

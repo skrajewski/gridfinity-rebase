@@ -143,7 +143,7 @@ def test_invalid_height_returns_clean_cli_error(height, tmp_path, capsys):
         == 2
     )
     assert "Base height" in json.loads(capsys.readouterr().err)["error"]
-    assert not (tmp_path / "input-rebased.stl").exists()
+    assert not list(tmp_path.glob("input-rebased*.stl"))
 
 
 def test_cli_end_to_end_and_safe_source_files(tmp_path, capsys):

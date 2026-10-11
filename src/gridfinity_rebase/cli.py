@@ -39,7 +39,12 @@ def parser():
         default=64,
         help="Curve resolution: multiple of 8, 32–256 (default: 64)",
     )
-    rebase.add_argument("-o", "--output", type=Path, help="Default: INPUT-rebased.stl")
+    rebase.add_argument(
+        "-o",
+        "--output",
+        type=Path,
+        help="Default: INPUT-rebased-PRESET.stl, or INPUT-rebased.stl with a donor",
+    )
     rebase.add_argument(
         "--base-height",
         type=float,
@@ -93,8 +98,9 @@ def main(argv=None):
             else:
                 report.update(standard.describe())
         if args.command == "rebase":
+            preset_suffix = f"-{args.preset}" if args.preset else ""
             output = args.output or args.input.with_name(
-                f"{args.input.stem}-rebased.stl"
+                f"{args.input.stem}-rebased{preset_suffix}.stl"
             )
             sources = [args.input] + ([args.base] if args.base else [])
             if output.resolve() in [p.resolve() for p in sources]:

@@ -86,7 +86,7 @@ def test_bad_resolution_is_rejected(segments, tmp_path, capsys):
         == 2
     )
     assert "Segments" in capsys.readouterr().err
-    assert not (tmp_path / "source-rebased.stl").exists()
+    assert not list(tmp_path.glob("source-rebased*.stl"))
 
 
 def test_missing_files_and_output_directory(tmp_path, capsys):

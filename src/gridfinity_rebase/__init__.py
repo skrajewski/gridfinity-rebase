@@ -1,6 +1,6 @@
 """Replace Gridfinity feet without a CAD subprocess."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 
 class RebaseError(ValueError):
