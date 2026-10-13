@@ -45,4 +45,20 @@ Aliases: `refined` → `rebuilt`, `standard` → `plain`.
 
 More: [preset details](docs/presets.md) · [benchmarks](docs/performance.md) · `gridfinity-rebase --help`
 
-MIT. See [third-party notices](THIRD_PARTY_NOTICES.md).
+## License and attribution
+
+
+The [MIT license](LICENSE) covers this CLI and its adapted preset implementation.
+Processing a model does not replace its existing license or attribution
+requirements. When sharing a rebased STL, preserve applicable notices and
+comply with the licenses of the input model and any donor geometry.
+
+Preset geometry is adapted from the MIT-licensed [Gridfinity Rebuilt implementation](https://github.com/kennetek/gridfinity-rebuilt-openscad/tree/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd)
+by Kenneth Hodson, based on Gridfinity by Zack Freedman. Rebuilt credits
+[Gridfinity Refined](https://www.printables.com/model/413761-gridfinity-refined)
+by grizzie17 as the source of its side-loading magnet pockets.
+
+Rebuilt source files at revision `910e22d8607fd7f5f51ad5e5cbc5287a76810bfd`:
+
+- [standard.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/standard.scad): mating profile, grid, radii and hole dimensions.
+- [gridfinity-rebuilt-holes.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/gridfinity-rebuilt-holes.scad): side-loading magnet pockets and crush ribs.

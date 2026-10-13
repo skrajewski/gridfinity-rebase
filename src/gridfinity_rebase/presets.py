@@ -2,7 +2,7 @@
 
 Dimensions: kennetek/gridfinity-rebuilt-openscad, src/core/standard.scad.
 Refined side-load pocket: src/core/gridfinity-rebuilt-holes.scad (MIT).
-See docs/presets.md and THIRD_PARTY_NOTICES.md for sources and attribution.
+See docs/presets.md, README.md, and LICENSE for sources and attribution.
 """
 
 from functools import lru_cache

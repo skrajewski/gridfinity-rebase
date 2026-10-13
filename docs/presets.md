@@ -37,4 +37,4 @@ bez pobierania STL i bez uruchamiania OpenSCAD.
 - [Gridfinity Refined, grizzie17](https://www.printables.com/model/413761-gridfinity-refined): projekt przypisany w kodzie Rebuilt jako źródło Refined.
 - [Katalog Gridfinity](https://github.com/jeffbarr/gridfinity-catalog): przegląd ekosystemu, w tym płyt bazowych.
 
-Atrybucja i licencja źródłowej implementacji: [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
+Atrybucja i licencja źródłowej implementacji: [README](../README.md#license-and-attribution) i [LICENSE](../LICENSE).
