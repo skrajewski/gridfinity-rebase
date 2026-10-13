@@ -1,43 +1,30 @@
-# Presety i źródła
+# Presets and sources
 
-Presety dotyczą **stopek pojemnika**, które wchodzą do gniazd Gridfinity.
-Płyty bazowe („baseplates”, np. Clickfinity) są osobnymi częściami; wymiana
-stopki nie zmienia płyty pod pojemnikiem.
+Presets apply to the **bin feet** that fit into Gridfinity sockets.
+Baseplates (such as Clickfinity) are separate parts; replacing a bin's feet
+does not change the plate underneath it.
 
-Przegląd źródeł wykonano 11 października 2026. Rebuilt jest szeroko używaną
-implementacją (około 2,3 tys. gwiazdek GitHub podczas przeglądu), a
-[Vector76](https://github.com/vector76/gridfinity_openscad) opisuje odtworzenie
-oryginału i opcjonalne kieszenie na magnesy/śruby. Nie istnieje tu wiarygodny,
-globalny ranking popularności stopek. Wybraliśmy standardowe, rozpowszechnione
-warianty opisane przez ich twórców, bez deklarowania rankingu pobrań.
+Sources were reviewed on October 11, 2026. Rebuilt is a widely used
+implementation (around 2,300 GitHub stars at the time of the review), while
+[Vector76](https://github.com/vector76/gridfinity_openscad) describes a
+recreation of the original with optional magnet pockets and screw holes.
+There is no reliable global popularity ranking for bin feet. The selected
+presets represent established variants documented by their creators,
+without claiming a download ranking.
 
-| Preset | Geometria |
+| Preset | Geometry |
 | --- | --- |
-| `plain` | Profil standardowy bez otworów na magnesy i śruby. |
-| `rebuilt` | Kieszenie z bocznym wsuwaniem magnesu, podłogą i otworem do wypchnięcia; otwarcia tworzą układ wachlarzowy, po jednym na każdą krawędź stopki. |
-| `rebuilt-screws` | Jak `rebuilt`, dodatkowo otwory na śruby. Ich głębokość kończy się na wysokości cięcia, maksymalnie 7 mm. |
-| `press-fit` | Dolne kieszenie z ośmioma żebrami zgniatanymi przy wciskaniu magnesu. |
-| `refined` | Alias `rebuilt`: identyczna geometria z bocznym wsuwaniem magnesów. |
-| `standard` | Alias `plain`: identyczna geometria bez otworów. |
+| `plain` | Standard profile without magnet pockets or screw holes. |
+| `rebuilt` | Side-loading magnet pockets with a floor and removal slot, arranged in a fan pattern with one opening per edge of the foot. |
+| `rebuilt-screws` | Same as `rebuilt`, with additional screw bores extending to the cut height, up to 7 mm. |
+| `press-fit` | Bottom-loading pockets with eight crush ribs for press-fitting magnets. |
+| `refined` | Alias of `rebuilt`: identical side-loading magnet geometry. |
+| `standard` | Alias of `plain`: identical geometry without holes. |
 
-`rebuilt` i `refined` korzystają z tej samej geometrii bocznych kieszeni
-Rebuilt/Refined: szerokość 5,86 mm, wysokość 1,9 mm i podłoga 0,4 mm.
-`rebuilt-screws` używa tych samych kieszeni z dodatkowymi otworami na śruby.
-Starsze nazwy `refined` i `standard` pozostają obsługiwane jako aliasy.
-
-Nazwy oznaczają konkretne konfiguracje tego narzędzia; pozostałe opcje
-Customizera upstream nie są obsługiwane. Wszystkie presety
-zachowują ten sam profil współpracy z płytą bazową. Są generowane lokalnie,
-bez pobierania STL i bez uruchamiania OpenSCAD.
-
-Źródła techniczne, z przypiętą rewizją `910e22d8607fd7f5f51ad5e5cbc5287a76810bfd`:
-
-- [Rebuilt — standard.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/standard.scad): profil, siatka, promienie i wymiary otworów.
-- [Rebuilt — gridfinity-rebuilt-holes.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/gridfinity-rebuilt-holes.scad): boczna kieszeń Refined oraz żebra kieszeni wciskanych.
-- [Gridfinity Refined, grizzie17](https://www.printables.com/model/413761-gridfinity-refined): projekt przypisany w kodzie Rebuilt jako źródło Refined.
-- [Katalog Gridfinity](https://github.com/jeffbarr/gridfinity-catalog): przegląd ekosystemu, w tym płyt bazowych.
-
-Atrybucja i licencja źródłowej implementacji: [README](../README.md#license-and-attribution) i [LICENSE](../LICENSE).
+`rebuilt` and `refined` use the same Rebuilt/Refined side-pocket geometry:
+5.86 mm wide, 1.9 mm high, with a 0.4 mm floor. `rebuilt-screws` adds screw
+bores to those pockets. The older names `refined` and `standard` remain
+supported as aliases.
 
 ## Independent geometry options
 
@@ -49,7 +36,12 @@ order: defaults (`plain`), the selected preset, then explicit flags. Running
 - `--screws` and `--no-screws` enable or disable Ø3 mm screw bores,
   independently of magnets. Their depth is the cut height, up to 7 mm.
 - `--crush-ribs` and `--no-crush-ribs` control ribs in bottom-loading pockets.
-
+- `--only-corners` limits magnet pockets and Ø3 mm screw bores to the four
+  outer corners of the whole bin, regardless of grid size. It applies to
+  side-loading pockets (including removal slots) and bottom-loading pockets,
+  with or without ribs. A 1×1 bin keeps all four holes; 1×N and N×1 grids
+  keep two at each end.
+- `--thumbscrew` and `--no-thumbscrew` control the central threaded hole.
 
 Omitted flags keep the preset's settings. `--magnets bottom` without a preset
 generates smooth Ø6.5 mm pockets, 2.4 mm deep. Enabling ribs produces
@@ -68,6 +60,9 @@ gridfinity-rebase rebase bin.stl --magnets side --screws
 # Ribbed bottom-loading pockets and screw bores
 gridfinity-rebase rebase bin.stl --preset press-fit --screws
 
+# Magnets and screws only at the four outer corners of the whole bin
+gridfinity-rebase rebase bin.stl --preset rebuilt-screws --only-corners
+
 # Bottom-loading pockets without ribs
 gridfinity-rebase rebase bin.stl --magnets bottom --no-crush-ribs
 
@@ -79,13 +74,26 @@ Existing preset commands keep their geometry and output filenames.
 Modified configurations receive a descriptive filename, such as
 `bin-rebased-screws.stl` or `bin-rebased-magnets-bottom-crush-ribs-screws.stl`.
 The JSON report includes a `geometry` object with the resolved `magnets`,
-`screws` and `crush_ribs` settings. The `base`
+`screws`, `crush_ribs`, `thumbscrew` and `only_corners` settings. The `base`
 field identifies the starting preset (default: `plain`) or donor path.
+
+`--only-corners` selects hole positions without enabling magnets or screws
+by itself. The output filename receives an `-only-corners` suffix, such as
+`bin-rebased-rebuilt-screws-only-corners.stl`. Central `--thumbscrew` holes
+still appear in every foot.
 
 With `--base`, all explicit geometry flags, including disabling flags, are
 rejected: the tool copies the donor geometry. The `geometry` field is `null`.
 
-## Central thumbscrew thread
+## Side-loading pockets and the central hole
+
+Within each foot, the pockets are rotated by 0°, 90°, 180° and 270°,
+following Rebuilt's `_base_holes()`. In local XY coordinates, the openings
+point as follows: (+13, +13) → +X, (−13, +13) → +Y, (−13, −13) → −X,
+(+13, −13) → −Y. Each pocket opens onto one of the two nearest edges of its
+foot; the same arrangement repeats across the grid. The removal slot rotates
+with its pocket. This keeps openings in adjacent feet from facing each other
+along the same axis.
 
 `--thumbscrew` adds a central, right-handed M15×1.5 threaded hole to every
 foot of a generated base, matching the Gridfinity Refined implementation in
@@ -109,15 +117,19 @@ is `bin-rebased-PRESET-thumbscrew.stl`. The report's top-level `thumbscrew`
 field is `true` or `false` for generated bases and `null` for donors, because
 the tool does not identify a donor's mounting style.
 
-## Outer-corner placement
+Preset names identify specific configurations in this tool; other upstream
+Customizer options are not exposed. All presets preserve the same mating
+profile for the baseplate. They are generated locally, without downloading
+STL files or running OpenSCAD.
 
-- `--only-corners` limits magnet pockets and Ø3 mm screw bores to the four
-  outer corners of the whole bin, regardless of grid size. It applies to
-  side-loading pockets (including removal slots) and bottom-loading pockets,
-  with or without ribs. A 1×1 bin keeps all four holes; 1×N and N×1 grids
-  keep two at each end.
+Technical sources, pinned to revision `910e22d8607fd7f5f51ad5e5cbc5287a76810bfd`:
 
-`--only-corners` selects hole positions without enabling magnets or screws
-by itself. The output filename receives an `-only-corners` suffix, such as
-`bin-rebased-rebuilt-screws-only-corners.stl`. Central `--thumbscrew` holes
-still appear in every foot.
+- [Rebuilt — standard.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/standard.scad): mating profile, grid, radii and hole dimensions.
+- [Rebuilt — gridfinity-rebuilt-holes.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/gridfinity-rebuilt-holes.scad): Refined side-loading pockets and press-fit crush ribs.
+- [Rebuilt — base.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/base.scad): the four-pocket fan arrangement in `_base_holes()` and the `_base_thumbscrew()` thread.
+- [threads-scad — threads.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/external/threads-scad/threads.scad): `ScrewThread()` profile and mesh (Ryan A. Colyer, CC0).
+- [Gridfinity Refined, grizzie17](https://www.printables.com/model/413761-gridfinity-refined): the project credited by Rebuilt as the source of Refined.
+- [Gridfinity catalog](https://github.com/jeffbarr/gridfinity-catalog): an overview of the ecosystem, including baseplates.
+
+Attribution: [README](../README.md#license-and-attribution). MIT license and
+copyright notices: [LICENSE](../LICENSE).
