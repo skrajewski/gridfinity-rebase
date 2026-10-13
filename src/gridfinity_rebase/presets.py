@@ -109,8 +109,9 @@ def single_foot(preset, segments):
         for y in (-13, 13):
             oriented = hole
             if preset in ("rebuilt", "rebuilt-screws"):
-                # Both left and right openings point to the nearest outside edge.
-                oriented = hole.rotate((0, 0, 180 if x < 0 else 0))
+                # Rebuilt's _base_holes(): one opening per foot edge.
+                angle = {(13, 13): 0, (-13, 13): 90, (-13, -13): 180, (13, -13): 270}[x, y]
+                oriented = hole.rotate((0, 0, angle))
             holes.append(oriented.translate((x, y, 0)))
     return m.Manifold.batch_boolean([foot, *holes], m.OpType.Subtract)
 

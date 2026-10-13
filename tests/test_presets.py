@@ -68,6 +68,42 @@ def test_side_loading_opening_and_screw_dimensions(preset):
     assert (base ^ wall).volume() == pytest.approx(0.1)
 
 
+@pytest.mark.parametrize("preset", ["rebuilt", "refined", "rebuilt-screws"])
+@pytest.mark.parametrize("size", [(1, 1), (1, 3), (3, 1), (2, 3), (3, 2), (3, 3)])
+@pytest.mark.parametrize("segments", [32, 64, 256])
+def test_side_loading_fan_on_every_foot(preset, size, segments):
+    grid = Grid(*size, 105, -23, -11)
+    base = preset_base(preset, grid, 7, segments)
+    # Independent expected directions from Rebuilt's _base_holes().
+    corners = [
+        ((13, 13), (1, 0)),
+        ((-13, 13), (0, 1)),
+        ((-13, -13), (-1, 0)),
+        ((13, -13), (0, -1)),
+    ]
+    for cx, cy in grid.cells:
+        for (x, y), (dx, dy) in corners:
+            centre = np.array((cx + x, cy + y, grid.z))
+            opening = centre + (5 * dx, 5 * dy, 0.9)
+            probe = m.Manifold.cube((0.5, 0.5, 1)).translate(opening - (0.25, 0.25, 0))
+            assert (base ^ probe).volume() < 1e-8
+            # The other equally near edge stays closed: this catches mirrored
+            # left/right pairs and accidentally cutting both outward directions.
+            other_edge = centre + (
+                0 if dx else np.sign(x) * 5,
+                0 if dy else np.sign(y) * 5,
+                0.9,
+            )
+            wall = m.Manifold.cube((0.5, 0.5, 1)).translate(
+                other_edge - (0.25, 0.25, 0)
+            )
+            assert (base ^ wall).volume() == pytest.approx(0.25)
+            # The bottom removal slit must follow the pocket's rotation too.
+            removal = centre + (-6 * dx, -6 * dy, 0.1)
+            slit = m.Manifold.cube((0.5, 0.5, 0.2)).translate(removal - (0.25, 0.25, 0))
+            assert (base ^ slit).volume() < 1e-8
+
+
 @pytest.mark.parametrize(
     "alias,canonical", [("refined", "rebuilt"), ("standard", "plain")]
 )

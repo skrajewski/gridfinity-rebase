@@ -14,7 +14,7 @@ warianty opisane przez ich twórców, bez deklarowania rankingu pobrań.
 | Preset | Geometria |
 | --- | --- |
 | `plain` | Profil standardowy bez otworów na magnesy i śruby. |
-| `rebuilt` | Kieszenie z bocznym wsuwaniem magnesu, podłogą i otworem do wypchnięcia; otwarcia kierują się na lewo/prawo od środka stopki. |
+| `rebuilt` | Kieszenie z bocznym wsuwaniem magnesu, podłogą i otworem do wypchnięcia; otwarcia tworzą układ wachlarzowy, po jednym na każdą krawędź stopki. |
 | `rebuilt-screws` | Jak `rebuilt`, dodatkowo otwory na śruby. Ich głębokość kończy się na wysokości cięcia, maksymalnie 7 mm. |
 | `press-fit` | Dolne kieszenie z ośmioma żebrami zgniatanymi przy wciskaniu magnesu. |
 | `refined` | Alias `rebuilt`: identyczna geometria z bocznym wsuwaniem magnesów. |
