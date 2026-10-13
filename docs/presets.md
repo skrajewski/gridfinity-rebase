@@ -25,8 +25,8 @@ Rebuilt/Refined: szerokość 5,86 mm, wysokość 1,9 mm i podłoga 0,4 mm.
 `rebuilt-screws` używa tych samych kieszeni z dodatkowymi otworami na śruby.
 Starsze nazwy `refined` i `standard` pozostają obsługiwane jako aliasy.
 
-Nazwy oznaczają konkretne konfiguracje tego narzędzia, bez centralnego
-otworu na thumbscrew i pozostałych opcji Customizera upstream. Wszystkie presety
+Nazwy oznaczają konkretne konfiguracje tego narzędzia; pozostałe opcje
+Customizera upstream nie są obsługiwane. Wszystkie presety
 zachowują ten sam profil współpracy z płytą bazową. Są generowane lokalnie,
 bez pobierania STL i bez uruchamiania OpenSCAD.
 
@@ -84,3 +84,27 @@ field identifies the starting preset (default: `plain`) or donor path.
 
 With `--base`, all explicit geometry flags, including disabling flags, are
 rejected: the tool copies the donor geometry. The `geometry` field is `null`.
+
+## Central thumbscrew thread
+
+`--thumbscrew` adds a central, right-handed M15×1.5 threaded hole to every
+foot of a generated base, matching the Gridfinity Refined implementation in
+Rebuilt. For a base with side-loading magnets:
+
+```sh
+gridfinity-rebase rebase bin.stl --preset refined --thumbscrew
+```
+
+The hole is 4.75 mm deep and ends at the top of the foot profile; the bridge
+above remains solid. Its geometry follows `_base_thumbscrew()` and
+`ScrewThread()`: nominal M15×1.5, a 60° tooth angle, a 0.4 mm tolerance
+parameter, a 15.65 mm tool diameter and a 0.1 mm shrinkage correction
+(maximum hole diameter: 15.75 mm). `--segments` sets the thread resolution
+along with the other curves. A compatible baseplate and Refined thumbscrew
+are required; the CLI generates the hole, not those separate parts.
+
+The option also works without `--preset`. With `--base`, donor holes are
+copied unchanged. For an otherwise unmodified preset, the output filename
+is `bin-rebased-PRESET-thumbscrew.stl`. The report's top-level `thumbscrew`
+field is `true` or `false` for generated bases and `null` for donors, because
+the tool does not identify a donor's mounting style.

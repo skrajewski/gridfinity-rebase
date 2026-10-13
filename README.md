@@ -62,3 +62,7 @@ Rebuilt source files at revision `910e22d8607fd7f5f51ad5e5cbc5287a76810bfd`:
 
 - [standard.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/standard.scad): mating profile, grid, radii and hole dimensions.
 - [gridfinity-rebuilt-holes.scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/core/gridfinity-rebuilt-holes.scad): side-loading magnet pockets and crush ribs.
+
+The native thumbscrew thread tessellation derives from `ScrewThread()` in
+[threads-scad](https://github.com/kennetek/gridfinity-rebuilt-openscad/blob/910e22d8607fd7f5f51ad5e5cbc5287a76810bfd/src/external/threads-scad/threads.scad),
+created 2016–2017 by Ryan A. Colyer and released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).

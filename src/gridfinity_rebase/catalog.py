@@ -30,6 +30,7 @@ def resolve_options(
     magnets=None,
     screws=None,
     crush_ribs=None,
+    thumbscrew=None,
 ):
     """Apply explicit overrides to a preset; None means keep its setting."""
     if preset not in PRESETS:
@@ -41,6 +42,7 @@ def resolve_options(
             "magnets": magnets,
             "screws": screws,
             "crush_ribs": crush_ribs,
+            "thumbscrew": thumbscrew,
         }.items()
         if value is not None
     }

@@ -85,6 +85,52 @@ def side_loading_pocket(segments):
     return pocket + removal
 
 
+@lru_cache(maxsize=8)
+def thumbscrew_hole(segments):
+    """Native port of Rebuilt's M15x1.5 _base_thumbscrew() cutter.
+
+    ScrewThread (Ryan A. Colyer, CC0) uses three helical rings per turn,
+    with small offsets at the seam to keep its mesh non-degenerate.
+    The hole stops at the top of the 4.75 mm foot, below the solid bridge.
+    """
+    pitch = 1.5
+    tolerance = 0.4
+    diameter = 1.01 * 15 + 1.25 * tolerance
+    outer_radius = (diameter + 0.25 * tolerance) / 2
+    inner_radius = (diameter - pitch / np.tan(np.pi / 6)) / 2
+    levels = int(np.ceil(3 * PROFILE_HEIGHT / pitch)) + 6
+    fudge = pitch * 0.001
+    angle = np.arange(segments) * 2 * np.pi / segments
+    rings = []
+    for level in range(levels + 1):
+        kind = level % 3
+        offset = np.zeros(segments)
+        if kind == 2:
+            offset[-2:] = (pitch / 2, pitch - fudge)
+        elif kind == 0:
+            offset[-2:] = (fudge, pitch / 2)
+        else:
+            offset[-2:] = (pitch / 2, pitch / 2 + fudge)
+        crest = (0, pitch / 2, pitch - fudge)[kind]
+        z = (
+            np.floor((level - 3) / 3) * pitch
+            + crest
+            + angle * pitch / (2 * np.pi)
+            - offset
+        )
+        z = np.clip(z, level * fudge, PROFILE_HEIGHT - (levels - level) * fudge)
+        phase = (z / pitch - angle / (2 * np.pi)) % 1
+        tooth = 1 - np.abs(2 * phase - 1)
+        radius = inner_radius + tooth * (outer_radius - inner_radius)
+        rings.append(
+            np.column_stack((radius * np.cos(angle), radius * np.sin(angle), z))
+        )
+    cutter = loft_rings(rings)
+    if cutter.status() != m.Error.NoError:
+        raise RebaseError(f"Cannot generate thumbscrew thread: {cutter.status().name}")
+    return cutter
+
+
 @lru_cache(maxsize=32)
 def single_foot(options: BaseOptions, segments):
     rings = []
@@ -93,6 +139,8 @@ def single_foot(options: BaseOptions, segments):
         ring = rounded_ring(width, width, radius, segments)
         rings.append(np.column_stack((ring, np.full(len(ring), z))))
     foot = loft_rings(rings)
+    if options.thumbscrew:
+        foot -= thumbscrew_hole(segments)
     if options.magnets == "none" and not options.screws:
         return foot
     hole = m.Manifold()
@@ -135,10 +183,12 @@ def preset_base(
     grid: Grid,
     height=PROFILE_HEIGHT,
     segments=64,
+    *,
+    thumbscrew=False,
 ):
     """Compatibility entry point for callers using named presets."""
     return generate_base(
-        resolve_options(preset),
+        resolve_options(preset, thumbscrew=thumbscrew),
         grid,
         height,
         segments,

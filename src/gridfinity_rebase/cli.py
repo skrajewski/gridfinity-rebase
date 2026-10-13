@@ -36,6 +36,7 @@ def parser():
     rebase.add_argument("--magnets", choices=("none", "side", "bottom"))
     rebase.add_argument("--screws", action=argparse.BooleanOptionalAction, default=None)
     rebase.add_argument("--crush-ribs", action=argparse.BooleanOptionalAction, default=None)
+    rebase.add_argument("--thumbscrew", action=argparse.BooleanOptionalAction, default=None)
     rebase.add_argument(
         "--segments",
         type=int,
@@ -73,6 +74,7 @@ def main(argv=None):
                     "magnets",
                     "screws",
                     "crush_ribs",
+                    "thumbscrew",
                 )
             }
             if args.base:
@@ -128,8 +130,9 @@ def main(argv=None):
                 preset = args.preset or "plain"
                 if options == resolve_options(
                     preset,
+                    thumbscrew=options.thumbscrew,
                 ):
-                    name = preset
+                    name = preset + ("-thumbscrew" if options.thumbscrew else "")
                 else:
                     name = options.filename_suffix()
                 preset_suffix = f"-{name}"
@@ -168,6 +171,7 @@ def main(argv=None):
                 else str(args.base),
                 base_height_mm=height,
                 base_height_mode="manual" if args.base_height is not None else "auto",
+                thumbscrew=options.thumbscrew if options is not None else None,
                 geometry=options.describe() if options is not None else None,
                 triangles=triangles,
             )

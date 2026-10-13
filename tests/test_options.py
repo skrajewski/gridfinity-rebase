@@ -22,8 +22,8 @@ from gridfinity_rebase.stl import read_stl, write_stl
 
 @pytest.mark.parametrize("preset", ["rebuilt", "refined", "rebuilt-screws"])
 def test_explicit_overrides_keep_unmentioned_settings(preset):
-    options = resolve_options(preset, screws=False)
-    assert options == BaseOptions(magnets="side")
+    options = resolve_options(preset, screws=False, thumbscrew=True)
+    assert options == BaseOptions(magnets="side", thumbscrew=True)
     assert resolve_options("press-fit", screws=True) == BaseOptions(
         magnets="bottom", crush_ribs=True, screws=True
     )
@@ -44,15 +44,16 @@ def test_changing_magnet_style_clears_inherited_ribs(magnets):
     [("none", False), ("side", False), ("bottom", False), ("bottom", True)],
 )
 @pytest.mark.parametrize("screws", [False, True])
+@pytest.mark.parametrize("thumbscrew", [False, True])
 @pytest.mark.parametrize("size", [(1, 1), (2, 3)])
 def test_independent_geometry_is_printable_and_preserves_upper_bin(
-    magnets, ribs, screws, size, tmp_path
+    magnets, ribs, screws, thumbscrew, size, tmp_path
 ):
     source = make_bin(*size, origin=(105, -23, -11))
     grid = detect_grid(source)
-    options = BaseOptions(magnets, screws, ribs)
+    options = BaseOptions(magnets, screws, ribs, thumbscrew)
     base = generate_base(options, grid, 7)
-    solid = generate_base(BaseOptions(), grid, 7)
+    solid = generate_base(BaseOptions(thumbscrew=thumbscrew), grid, 7)
     assert detect_grid(base) == grid
     assert solid.slice(grid.z + 3).area() - base.slice(
         grid.z + 3
@@ -136,6 +137,12 @@ def test_screw_only_depth_is_limited_to_cut_or_seven_mm(height):
             "magnets-bottom-crush-ribs-screws",
         ),
         (["--preset", "press-fit", "--magnets", "none"], BaseOptions(), "plain"),
+        (["--thumbscrew"], BaseOptions(thumbscrew=True), "plain-thumbscrew"),
+        (
+            ["--preset", "refined", "--no-thumbscrew"],
+            BaseOptions(magnets="side"),
+            "refined",
+        ),
     ],
 )
 def test_cli_resolves_options_reports_geometry_and_names_output(
@@ -147,6 +154,7 @@ def test_cli_resolves_options_reports_geometry_and_names_output(
     assert main(["rebase", str(source), *flags, "--json"]) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["geometry"] == expected.describe()
+    assert report["thumbscrew"] == expected.thumbscrew
     assert report["output"] == str(tmp_path / f"bin-rebased-{suffix}.stl")
     result = read_stl(report["output"])
     # Slice below the body verifies the flags affected the exported mesh.
@@ -165,6 +173,8 @@ def test_cli_resolves_options_reports_geometry_and_names_output(
         ["--no-screws"],
         ["--crush-ribs"],
         ["--no-crush-ribs"],
+        ["--thumbscrew"],
+        ["--no-thumbscrew"],
     ],
 )
 def test_donor_rejects_all_explicit_geometry_flags_before_io(flags, tmp_path, capsys):
@@ -207,5 +217,5 @@ def test_donor_report_does_not_claim_generated_geometry(tmp_path, capsys):
     assert main(["rebase", str(source), "--base", str(donor), "--json"]) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["base"] == str(donor)
-    assert report["geometry"] is None
+    assert report["geometry"] is None and report["thumbscrew"] is None
     assert report["output"] == str(tmp_path / "bin-rebased.stl")

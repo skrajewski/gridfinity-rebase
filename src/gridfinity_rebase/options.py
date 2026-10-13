@@ -11,6 +11,7 @@ class BaseOptions:
     magnets: Literal["none", "side", "bottom"] = "none"
     screws: bool = False
     crush_ribs: bool = False
+    thumbscrew: bool = False
 
     def __post_init__(self):
         if self.magnets not in ("none", "side", "bottom"):
@@ -31,4 +32,6 @@ class BaseOptions:
             parts.append("screws")
         if not parts:
             parts.append("plain")
+        if self.thumbscrew:
+            parts.append("thumbscrew")
         return "-".join(parts)
