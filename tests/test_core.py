@@ -11,15 +11,12 @@ from gridfinity_rebase.cli import main
 from gridfinity_rebase.geometry import detect_grid, donor_base, replace_base
 from gridfinity_rebase.stl import read_stl, write_stl
 
-EXAMPLES = Path(__file__).resolve().parents[1] / "tmp"
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
-@pytest.mark.skipif(
-    not (EXAMPLES / "test.stl").exists(), reason="local user examples unavailable"
-)
 def test_real_donor_preserves_body(tmp_path):
-    source = read_stl(EXAMPLES / "test.stl")
-    donor = read_stl(EXAMPLES / "test-rebased.stl")
+    source = read_stl(FIXTURES / "test.stl")
+    donor = read_stl(FIXTURES / "test-rebased.stl")
     grid = detect_grid(source)
     assert (grid.nx, grid.ny) == (1, 1)
     base = donor_base(donor, detect_grid(donor), grid, 4.75)
@@ -78,15 +75,12 @@ def test_cli_rejects_non_gridfinity(tmp_path, capsys):
     assert "not Gridfinity" in capsys.readouterr().err
 
 
-@pytest.mark.skipif(
-    not (EXAMPLES / "test.stl").exists(), reason="local user examples unavailable"
-)
 @pytest.mark.parametrize("filename", ["test.stl", "test-rebased.stl"])
 @pytest.mark.parametrize("preset", list(PRESETS))
 def test_all_real_exports_remain_watertight_at_float32(filename, preset, tmp_path):
     from gridfinity_rebase.presets import preset_base
 
-    source = read_stl(EXAMPLES / filename)
+    source = read_stl(FIXTURES / filename)
     grid = detect_grid(source)
     result = replace_base(source, preset_base(preset, grid), grid)
     output = tmp_path / "result.stl"

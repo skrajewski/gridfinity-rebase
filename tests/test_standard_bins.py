@@ -18,12 +18,10 @@ from gridfinity_rebase.geometry import (
 from gridfinity_rebase.presets import preset_base
 from gridfinity_rebase.stl import read_stl, write_stl
 
-EXAMPLE = Path(__file__).resolve().parents[1] / "tmp/gf_bin_1x1_h6_bin_v01.stl"
+FIXTURES = Path(__file__).resolve().parent / "fixtures"
+EXAMPLE = FIXTURES / "gf_bin_1x1_h6_bin_v01.stl"
 
 
-@pytest.mark.skipif(
-    not EXAMPLE.exists(), reason="local standard-bin example unavailable"
-)
 @pytest.mark.parametrize("preset", list(PRESETS))
 def test_reference_bin_auto_replacement_preserves_interior(preset, tmp_path, capsys):
     source = read_stl(EXAMPLE)
@@ -120,9 +118,6 @@ def test_1x1_donor_provides_continuous_full_bridge(preset, tmp_path):
     assert len(mesh.split()) == 1
 
 
-@pytest.mark.skipif(
-    not EXAMPLE.exists(), reason="local standard-bin example unavailable"
-)
 def test_auto_rejects_donor_with_lower_floor(tmp_path, capsys):
     path = tmp_path / "input.stl"
     write_stl(make_bin(), path)
@@ -131,12 +126,8 @@ def test_auto_rejects_donor_with_lower_floor(tmp_path, capsys):
     assert not (tmp_path / "input-rebased.stl").exists()
 
 
-@pytest.mark.skipif(
-    not EXAMPLE.with_name("test.stl").exists(),
-    reason="local custom example unavailable",
-)
 def test_custom_model_requires_explicit_override(tmp_path, capsys):
-    source = EXAMPLE.with_name("test.stl")
+    source = FIXTURES / "test.stl"
     assert main(["inspect", str(source), "--json"]) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["standard_bin"] is False
