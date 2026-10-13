@@ -11,8 +11,13 @@ import manifold3d as m
 import numpy as np
 
 from . import RebaseError
-from .catalog import ALIASES, PRESETS
+from .catalog import PRESETS, resolve_options
 from .geometry import PITCH, PROFILE_HEIGHT, Grid
+from .options import BaseOptions
+
+__all__ = ["PRESETS", "generate_base", "preset_base"]
+
+HOLE_CORNERS = ((-13, -13), (-13, 13), (13, -13), (13, 13))
 
 
 def rounded_ring(width, depth, radius, segments):
@@ -81,20 +86,19 @@ def side_loading_pocket(segments):
 
 
 @lru_cache(maxsize=32)
-def single_foot(preset, segments):
+def single_foot(options: BaseOptions, segments):
     rings = []
     for z, radius in [(0, 0.8), (0.8, 1.6), (2.6, 1.6), (4.75, 3.75)]:
         width = 34 + 2 * radius
         ring = rounded_ring(width, width, radius, segments)
         rings.append(np.column_stack((ring, np.full(len(ring), z))))
     foot = loft_rings(rings)
-    if preset == "plain":
+    if options.magnets == "none" and not options.screws:
         return foot
-    if preset in ("rebuilt", "rebuilt-screws"):
+    hole = m.Manifold()
+    if options.magnets == "side":
         hole = side_loading_pocket(segments)
-        if preset == "rebuilt-screws":
-            hole += cylinder(1.5, -0.01, PROFILE_HEIGHT + 0.01, segments)
-    elif preset == "press-fit":
+    elif options.magnets == "bottom" and options.crush_ribs:
         angle = np.linspace(0, 2 * np.pi, segments, endpoint=False)
         radius = 3.1 + 0.15 * np.sin(8 * angle)
         hole = (
@@ -104,27 +108,49 @@ def single_foot(preset, segments):
             .extrude(2.41)
             .translate((0, 0, -0.01))
         )
+    elif options.magnets == "bottom":
+        hole = cylinder(3.25, -0.01, 2.4, segments)
+    if options.screws:
+        hole += cylinder(1.5, -0.01, PROFILE_HEIGHT + 0.01, segments)
     holes = []
-    for x in (-13, 13):
-        for y in (-13, 13):
-            oriented = hole
-            if preset in ("rebuilt", "rebuilt-screws"):
-                # Rebuilt's _base_holes(): one opening per foot edge.
-                angle = {(13, 13): 0, (-13, 13): 90, (-13, -13): 180, (13, -13): 270}[x, y]
-                oriented = hole.rotate((0, 0, angle))
-            holes.append(oriented.translate((x, y, 0)))
+    for x, y in HOLE_CORNERS:
+        oriented = hole
+        if options.magnets == "side":
+            # Rebuilt's _base_holes(): a fan with one opening per foot edge.
+            # Rotate the removal slit with the pocket, rather than mirroring
+            # pairs of openings toward each other between adjacent feet.
+            angle = {
+                (13, 13): 0,
+                (-13, 13): 90,
+                (-13, -13): 180,
+                (13, -13): 270,
+            }[x, y]
+            oriented = hole.rotate((0, 0, angle))
+        holes.append(oriented.translate((x, y, 0)))
     return m.Manifold.batch_boolean([foot, *holes], m.OpType.Subtract)
 
 
-def preset_base(preset: str, grid: Grid, height=PROFILE_HEIGHT, segments=64):
-    if preset not in PRESETS:
-        raise RebaseError(f"Unknown preset: {preset}")
-    # Resolve aliases before generating/caching geometry so they share a foot.
-    preset = ALIASES.get(preset, preset)
+def preset_base(
+    preset: str,
+    grid: Grid,
+    height=PROFILE_HEIGHT,
+    segments=64,
+):
+    """Compatibility entry point for callers using named presets."""
+    return generate_base(
+        resolve_options(preset),
+        grid,
+        height,
+        segments,
+    )
+
+
+def generate_base(options: BaseOptions, grid: Grid, height=PROFILE_HEIGHT, segments=64):
+    """Generate a base using only resolved geometry settings."""
     if segments < 32 or segments > 256 or segments % 8:
         raise RebaseError("Segments must be a multiple of 8 between 32 and 256")
     parts = [
-        single_foot(preset, segments).translate((x, y, grid.z)) for x, y in grid.cells
+        single_foot(options, segments).translate((x, y, grid.z)) for x, y in grid.cells
     ]
     if height > PROFILE_HEIGHT:
         bridge = rounded_prism(
@@ -138,7 +164,7 @@ def preset_base(preset: str, grid: Grid, height=PROFILE_HEIGHT, segments=64):
         bridge = bridge.translate(
             (grid.x + (grid.nx - 1) * PITCH / 2, grid.y + (grid.ny - 1) * PITCH / 2, 0)
         )
-        if preset == "rebuilt-screws":
+        if options.screws:
             holes = [
                 cylinder(
                     1.5,
@@ -147,8 +173,7 @@ def preset_base(preset: str, grid: Grid, height=PROFILE_HEIGHT, segments=64):
                     segments,
                 ).translate((x + dx, y + dy, 0))
                 for x, y in grid.cells
-                for dx in (-13, 13)
-                for dy in (-13, 13)
+                for dx, dy in HOLE_CORNERS
             ]
             bridge = m.Manifold.batch_boolean([bridge, *holes], m.OpType.Subtract)
         parts.append(bridge)

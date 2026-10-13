@@ -38,3 +38,49 @@ bez pobierania STL i bez uruchamiania OpenSCAD.
 - [Katalog Gridfinity](https://github.com/jeffbarr/gridfinity-catalog): przegląd ekosystemu, w tym płyt bazowych.
 
 Atrybucja i licencja źródłowej implementacji: [README](../README.md#license-and-attribution) i [LICENSE](../LICENSE).
+
+## Independent geometry options
+
+A preset is a shortcut to a group of settings. Settings are resolved in this
+order: defaults (`plain`), the selected preset, then explicit flags. Running
+`rebase` without a preset or donor generates a `plain` base.
+
+- `--magnets none|side|bottom` selects the magnet pocket style.
+- `--screws` and `--no-screws` enable or disable Ø3 mm screw bores,
+  independently of magnets. Their depth is the cut height, up to 7 mm.
+- `--crush-ribs` and `--no-crush-ribs` control ribs in bottom-loading pockets.
+
+
+Omitted flags keep the preset's settings. `--magnets bottom` without a preset
+generates smooth Ø6.5 mm pockets, 2.4 mm deep. Enabling ribs produces
+`press-fit` geometry: eight ribs with a diameter range of 5.9–6.5 mm.
+Explicit `--crush-ribs` requires `--magnets bottom`. Changing a preset's
+magnet style to `none` or `side` clears inherited ribs; explicitly enabling
+ribs with either style produces an error.
+
+```sh
+# Screws only
+gridfinity-rebase rebase bin.stl --screws
+
+# Side-loading magnet pockets and screw bores
+gridfinity-rebase rebase bin.stl --magnets side --screws
+
+# Ribbed bottom-loading pockets and screw bores
+gridfinity-rebase rebase bin.stl --preset press-fit --screws
+
+# Bottom-loading pockets without ribs
+gridfinity-rebase rebase bin.stl --magnets bottom --no-crush-ribs
+
+# Override a preset setting
+gridfinity-rebase rebase bin.stl --preset rebuilt-screws --no-screws
+```
+
+Existing preset commands keep their geometry and output filenames.
+Modified configurations receive a descriptive filename, such as
+`bin-rebased-screws.stl` or `bin-rebased-magnets-bottom-crush-ribs-screws.stl`.
+The JSON report includes a `geometry` object with the resolved `magnets`,
+`screws` and `crush_ribs` settings. The `base`
+field identifies the starting preset (default: `plain`) or donor path.
+
+With `--base`, all explicit geometry flags, including disabling flags, are
+rejected: the tool copies the donor geometry. The `geometry` field is `null`.

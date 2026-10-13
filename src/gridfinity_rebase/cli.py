@@ -26,13 +26,16 @@ def parser():
         "rebase", help="Replace the bottom of an STL with a donor's feet"
     )
     rebase.add_argument("input", type=Path)
-    choice = rebase.add_mutually_exclusive_group(required=True)
+    choice = rebase.add_mutually_exclusive_group()
     choice.add_argument("--base", type=Path, help="STL providing the replacement base")
     from .catalog import PRESETS
 
     choice.add_argument(
-        "--preset", choices=PRESETS, help="Generate the base natively, offline"
+        "--preset", choices=PRESETS, help="Starting settings (default: plain)"
     )
+    rebase.add_argument("--magnets", choices=("none", "side", "bottom"))
+    rebase.add_argument("--screws", action=argparse.BooleanOptionalAction, default=None)
+    rebase.add_argument("--crush-ribs", action=argparse.BooleanOptionalAction, default=None)
     rebase.add_argument(
         "--segments",
         type=int,
@@ -60,8 +63,30 @@ def main(argv=None):
     start = perf_counter()
     args = parser().parse_args(argv)
     try:
-        from .catalog import PRESETS
+        from .catalog import PRESETS, resolve_options
 
+        options = None
+        if args.command == "rebase":
+            overrides = {
+                name: getattr(args, name)
+                for name in (
+                    "magnets",
+                    "screws",
+                    "crush_ribs",
+                )
+            }
+            if args.base:
+                flags = [
+                    ("--no-" if value is False else "--") + name.replace("_", "-")
+                    for name, value in overrides.items()
+                    if value is not None
+                ]
+                if flags:
+                    raise RebaseError(
+                        f"Geometry options ({', '.join(flags)}) cannot be used with --base; donor bases are copied as-is"
+                    )
+            else:
+                options = resolve_options(args.preset or "plain", **overrides)
         if args.command == "presets":
             print(
                 json.dumps(PRESETS)
@@ -78,7 +103,7 @@ def main(argv=None):
             replace_base,
             validate_height,
         )
-        from .presets import preset_base
+        from .presets import generate_base
         from .stl import read_stl, write_stl
 
         solid = read_stl(args.input)
@@ -98,7 +123,16 @@ def main(argv=None):
             else:
                 report.update(standard.describe())
         if args.command == "rebase":
-            preset_suffix = f"-{args.preset}" if args.preset else ""
+            preset_suffix = ""
+            if options is not None:
+                preset = args.preset or "plain"
+                if options == resolve_options(
+                    preset,
+                ):
+                    name = preset
+                else:
+                    name = options.filename_suffix()
+                preset_suffix = f"-{name}"
             output = args.output or args.input.with_name(
                 f"{args.input.stem}-rebased{preset_suffix}.stl"
             )
@@ -111,8 +145,8 @@ def main(argv=None):
                 args.base_height if args.base_height is not None else standard.height
             )
             validate_height(solid, grid, height)
-            if args.preset:
-                replacement = preset_base(args.preset, grid, height, args.segments)
+            if options is not None:
+                replacement = generate_base(options, grid, height, args.segments)
             else:
                 donor = read_stl(args.base)
                 donor_grid = detect_grid(donor, str(args.base))
@@ -129,9 +163,12 @@ def main(argv=None):
             triangles = write_stl(result, output, overwrite=args.overwrite)
             report.update(
                 output=str(output),
-                base=args.preset or str(args.base),
+                base=(args.preset or "plain")
+                if options is not None
+                else str(args.base),
                 base_height_mm=height,
                 base_height_mode="manual" if args.base_height is not None else "auto",
+                geometry=options.describe() if options is not None else None,
                 triangles=triangles,
             )
         report["elapsed_ms"] = round((perf_counter() - start) * 1000, 2)
