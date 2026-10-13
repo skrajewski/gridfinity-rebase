@@ -1,63 +1,186 @@
 {
+  "measured_at_utc": "2026-10-13T21:57:46.970337+00:00",
   "platform": "macOS-26.2-arm64-arm-64bit",
+  "machine": "arm64",
+  "processor": "arm",
+  "logical_cpus": 12,
   "python": "3.11.14",
+  "dependencies": {
+    "gridfinity-rebase": "0.2.1",
+    "manifold3d": "3.5.4",
+    "numpy": "2.4.6"
+  },
   "runs": 5,
+  "warmups_per_scenario": 1,
+  "segments": 64,
+  "inputs": {
+    "1x1": {
+      "sha256": "b3b6c2ad78f0e541e5e90331b669c8eaff3a692773903fc71c41b03e225bf184",
+      "triangles": 1894
+    },
+    "donor": {
+      "sha256": "b3b6c2ad78f0e541e5e90331b669c8eaff3a692773903fc71c41b03e225bf184",
+      "triangles": 1894
+    },
+    "6x6": {
+      "sha256": "c65ebe2a72559086b1a7fa85df1fdde08dccaef808ebc5581f53459b682f24d9",
+      "triangles": 58246
+    }
+  },
   "results": [
     {
-      "scenario": "example/plain",
-      "input_triangles": 7472,
-      "process_median_ms": 101.38,
-      "process_min_ms": 100.03,
-      "process_max_ms": 102.86,
-      "warm_engine_median_ms": 38.26
+      "scenario": "1x1/plain",
+      "input_triangles": 1894,
+      "process_median_ms": 94.51,
+      "process_min_ms": 89.43,
+      "process_max_ms": 95.4,
+      "warm_engine_median_ms": 12.46,
+      "process_samples_ms": [
+        94.5103750564158,
+        89.4317920319736,
+        89.57604202441871,
+        95.39591695647687,
+        94.918749993667
+      ],
+      "warm_engine_samples_ms": [
+        12.875832966528833,
+        12.11520901415497,
+        12.394832912832499,
+        12.613541912287474,
+        12.457333039492369
+      ]
     },
     {
-      "scenario": "example/rebuilt",
-      "input_triangles": 7472,
-      "process_median_ms": 108.53,
-      "process_min_ms": 107.69,
-      "process_max_ms": 111.91,
-      "warm_engine_median_ms": 40.16
+      "scenario": "1x1/rebuilt",
+      "input_triangles": 1894,
+      "process_median_ms": 94.41,
+      "process_min_ms": 93.3,
+      "process_max_ms": 97.89,
+      "warm_engine_median_ms": 14.64,
+      "process_samples_ms": [
+        94.40787509083748,
+        97.88887505419552,
+        93.29600003547966,
+        94.29145907051861,
+        97.07208396866918
+      ],
+      "warm_engine_samples_ms": [
+        15.291957999579608,
+        14.654417056590319,
+        14.159000013023615,
+        14.640958048403263,
+        14.112790930084884
+      ]
     },
     {
-      "scenario": "example/rebuilt-screws",
-      "input_triangles": 7472,
-      "process_median_ms": 131.42,
-      "process_min_ms": 130.68,
-      "process_max_ms": 139.22,
-      "warm_engine_median_ms": 55.53
+      "scenario": "1x1/rebuilt-screws",
+      "input_triangles": 1894,
+      "process_median_ms": 112.18,
+      "process_min_ms": 110.47,
+      "process_max_ms": 115.48,
+      "warm_engine_median_ms": 28.16,
+      "process_samples_ms": [
+        115.48470810521394,
+        111.7373340530321,
+        112.17912496067584,
+        110.46716605778784,
+        115.03658397123218
+      ],
+      "warm_engine_samples_ms": [
+        27.97850000206381,
+        28.1615830026567,
+        27.632666984573007,
+        28.340917080640793,
+        28.18029106128961
+      ]
     },
     {
-      "scenario": "example/refined",
-      "input_triangles": 7472,
-      "process_median_ms": 108.46,
-      "process_min_ms": 108.0,
-      "process_max_ms": 109.67,
-      "warm_engine_median_ms": 39.41
+      "scenario": "1x1/refined",
+      "input_triangles": 1894,
+      "process_median_ms": 87.83,
+      "process_min_ms": 87.02,
+      "process_max_ms": 89.51,
+      "warm_engine_median_ms": 14.14,
+      "process_samples_ms": [
+        87.8272500121966,
+        87.02079206705093,
+        89.35604197904468,
+        87.70487492438406,
+        89.51008401345462
+      ],
+      "warm_engine_samples_ms": [
+        14.215333969332278,
+        13.873500050976872,
+        14.188083005137742,
+        13.950416934676468,
+        14.141583000309765
+      ]
     },
     {
-      "scenario": "example/press-fit",
-      "input_triangles": 7472,
-      "process_median_ms": 108.18,
-      "process_min_ms": 107.84,
-      "process_max_ms": 117.91,
-      "warm_engine_median_ms": 40.14
+      "scenario": "1x1/press-fit",
+      "input_triangles": 1894,
+      "process_median_ms": 87.83,
+      "process_min_ms": 86.86,
+      "process_max_ms": 90.24,
+      "warm_engine_median_ms": 13.72,
+      "process_samples_ms": [
+        87.73008291609585,
+        88.37041701190174,
+        90.24062496609986,
+        86.86333289369941,
+        87.8282500198111
+      ],
+      "warm_engine_samples_ms": [
+        13.611625065095723,
+        13.737166998907924,
+        13.724167016334832,
+        13.462667004205287,
+        14.19558294583112
+      ]
     },
     {
-      "scenario": "example/donor",
-      "input_triangles": 7472,
-      "process_median_ms": 107.02,
-      "process_min_ms": 105.84,
-      "process_max_ms": 108.47,
-      "warm_engine_median_ms": 43.12
+      "scenario": "1x1/donor",
+      "input_triangles": 1894,
+      "process_median_ms": 89.76,
+      "process_min_ms": 89.11,
+      "process_max_ms": 91.82,
+      "warm_engine_median_ms": 18.54,
+      "process_samples_ms": [
+        90.0000830879435,
+        89.24408291932195,
+        89.1148749506101,
+        89.76320794317871,
+        91.8165419716388
+      ],
+      "warm_engine_samples_ms": [
+        18.746749963611364,
+        18.00991699565202,
+        18.890125094912946,
+        18.205416039563715,
+        18.536541028879583
+      ]
     },
     {
       "scenario": "6x6/refined",
       "input_triangles": 58246,
-      "process_median_ms": 258.19,
-      "process_min_ms": 257.55,
-      "process_max_ms": 279.54,
-      "warm_engine_median_ms": 177.69
+      "process_median_ms": 260.88,
+      "process_min_ms": 257.67,
+      "process_max_ms": 270.68,
+      "warm_engine_median_ms": 178.35,
+      "process_samples_ms": [
+        264.94266698136926,
+        260.8814589912072,
+        257.6676660683006,
+        260.19500009715557,
+        270.68120893090963
+      ],
+      "warm_engine_samples_ms": [
+        179.92949998006225,
+        178.08800004422665,
+        178.34912496618927,
+        178.3229160355404,
+        179.09554205834866
+      ]
     }
   ]
 }
