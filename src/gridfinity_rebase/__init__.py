@@ -1,6 +1,8 @@
-"""Replace Gridfinity feet without a CAD subprocess."""
+"""Replace the base of a Gridfinity bin STL."""
 
-__version__ = "0.2.1"
+from importlib.metadata import version
+
+__version__ = version("gridfinity-rebase")
 
 
 class RebaseError(ValueError):
