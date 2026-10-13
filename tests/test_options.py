@@ -175,6 +175,7 @@ def test_cli_resolves_options_reports_geometry_and_names_output(
         ["--no-crush-ribs"],
         ["--thumbscrew"],
         ["--no-thumbscrew"],
+        ["--only-corners"],
     ],
 )
 def test_donor_rejects_all_explicit_geometry_flags_before_io(flags, tmp_path, capsys):

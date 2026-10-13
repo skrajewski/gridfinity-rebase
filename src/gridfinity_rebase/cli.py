@@ -37,6 +37,7 @@ def parser():
     rebase.add_argument("--screws", action=argparse.BooleanOptionalAction, default=None)
     rebase.add_argument("--crush-ribs", action=argparse.BooleanOptionalAction, default=None)
     rebase.add_argument("--thumbscrew", action=argparse.BooleanOptionalAction, default=None)
+    rebase.add_argument("--only-corners", action="store_true", default=None)
     rebase.add_argument(
         "--segments",
         type=int,
@@ -75,6 +76,7 @@ def main(argv=None):
                     "screws",
                     "crush_ribs",
                     "thumbscrew",
+                    "only_corners",
                 )
             }
             if args.base:
@@ -131,8 +133,11 @@ def main(argv=None):
                 if options == resolve_options(
                     preset,
                     thumbscrew=options.thumbscrew,
+                    only_corners=options.only_corners,
                 ):
                     name = preset + ("-thumbscrew" if options.thumbscrew else "")
+                    if options.only_corners:
+                        name += "-only-corners"
                 else:
                     name = options.filename_suffix()
                 preset_suffix = f"-{name}"

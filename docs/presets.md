@@ -108,3 +108,16 @@ copied unchanged. For an otherwise unmodified preset, the output filename
 is `bin-rebased-PRESET-thumbscrew.stl`. The report's top-level `thumbscrew`
 field is `true` or `false` for generated bases and `null` for donors, because
 the tool does not identify a donor's mounting style.
+
+## Outer-corner placement
+
+- `--only-corners` limits magnet pockets and Ø3 mm screw bores to the four
+  outer corners of the whole bin, regardless of grid size. It applies to
+  side-loading pockets (including removal slots) and bottom-loading pockets,
+  with or without ribs. A 1×1 bin keeps all four holes; 1×N and N×1 grids
+  keep two at each end.
+
+`--only-corners` selects hole positions without enabling magnets or screws
+by itself. The output filename receives an `-only-corners` suffix, such as
+`bin-rebased-rebuilt-screws-only-corners.stl`. Central `--thumbscrew` holes
+still appear in every foot.

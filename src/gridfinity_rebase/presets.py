@@ -132,7 +132,7 @@ def thumbscrew_hole(segments):
 
 
 @lru_cache(maxsize=32)
-def single_foot(options: BaseOptions, segments):
+def single_foot(options: BaseOptions, segments, corners=HOLE_CORNERS):
     rings = []
     for z, radius in [(0, 0.8), (0.8, 1.6), (2.6, 1.6), (4.75, 3.75)]:
         width = 34 + 2 * radius
@@ -141,7 +141,7 @@ def single_foot(options: BaseOptions, segments):
     foot = loft_rings(rings)
     if options.thumbscrew:
         foot -= thumbscrew_hole(segments)
-    if options.magnets == "none" and not options.screws:
+    if not corners or (options.magnets == "none" and not options.screws):
         return foot
     hole = m.Manifold()
     if options.magnets == "side":
@@ -161,7 +161,7 @@ def single_foot(options: BaseOptions, segments):
     if options.screws:
         hole += cylinder(1.5, -0.01, PROFILE_HEIGHT + 0.01, segments)
     holes = []
-    for x, y in HOLE_CORNERS:
+    for x, y in corners:
         oriented = hole
         if options.magnets == "side":
             # Rebuilt's _base_holes(): a fan with one opening per foot edge.
@@ -185,10 +185,11 @@ def preset_base(
     segments=64,
     *,
     thumbscrew=False,
+    only_corners=False,
 ):
     """Compatibility entry point for callers using named presets."""
     return generate_base(
-        resolve_options(preset, thumbscrew=thumbscrew),
+        resolve_options(preset, thumbscrew=thumbscrew, only_corners=only_corners),
         grid,
         height,
         segments,
@@ -199,8 +200,28 @@ def generate_base(options: BaseOptions, grid: Grid, height=PROFILE_HEIGHT, segme
     """Generate a base using only resolved geometry settings."""
     if segments < 32 or segments > 256 or segments % 8:
         raise RebaseError("Segments must be a multiple of 8 between 32 and 256")
+    # Select individual hole positions, not entire corner feet. A 1xN grid
+    # has two selected corners at each end, and a 1x1 grid keeps all four.
+    cells = [
+        (
+            grid.x + i * PITCH,
+            grid.y + j * PITCH,
+            tuple(
+                (dx, dy)
+                for dx, dy in HOLE_CORNERS
+                if not options.only_corners
+                or (
+                    i == (0 if dx < 0 else grid.nx - 1)
+                    and j == (0 if dy < 0 else grid.ny - 1)
+                )
+            ),
+        )
+        for i in range(grid.nx)
+        for j in range(grid.ny)
+    ]
     parts = [
-        single_foot(options, segments).translate((x, y, grid.z)) for x, y in grid.cells
+        single_foot(options, segments, corners).translate((x, y, grid.z))
+        for x, y, corners in cells
     ]
     if height > PROFILE_HEIGHT:
         bridge = rounded_prism(
@@ -222,8 +243,8 @@ def generate_base(options: BaseOptions, grid: Grid, height=PROFILE_HEIGHT, segme
                     grid.z + min(height, 7) + 0.01,
                     segments,
                 ).translate((x + dx, y + dy, 0))
-                for x, y in grid.cells
-                for dx, dy in HOLE_CORNERS
+                for x, y, corners in cells
+                for dx, dy in corners
             ]
             bridge = m.Manifold.batch_boolean([bridge, *holes], m.OpType.Subtract)
         parts.append(bridge)

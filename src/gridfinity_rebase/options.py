@@ -12,6 +12,7 @@ class BaseOptions:
     screws: bool = False
     crush_ribs: bool = False
     thumbscrew: bool = False
+    only_corners: bool = False
 
     def __post_init__(self):
         if self.magnets not in ("none", "side", "bottom"):
@@ -34,4 +35,6 @@ class BaseOptions:
             parts.append("plain")
         if self.thumbscrew:
             parts.append("thumbscrew")
+        if self.only_corners:
+            parts.append("only-corners")
         return "-".join(parts)
