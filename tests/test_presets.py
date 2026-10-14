@@ -71,7 +71,7 @@ def test_side_loading_opening_and_screw_dimensions(preset):
 @pytest.mark.parametrize("preset", ["rebuilt", "refined", "rebuilt-screws"])
 @pytest.mark.parametrize("size", [(1, 1), (1, 3), (3, 1), (2, 3), (3, 2), (3, 3)])
 @pytest.mark.parametrize("segments", [32, 64, 256])
-def test_side_loading_fan_on_every_foot(preset, size, segments):
+def test_side_loading_fan_on_every_foot(preset, size: tuple[int, int], segments):
     grid = Grid(*size, 105, -23, -11)
     base = preset_base(preset, grid, 7, segments)
     # Independent expected directions from Rebuilt's _base_holes().

@@ -4,6 +4,7 @@ import manifold3d as m
 import numpy as np
 import pytest
 import trimesh
+from trimesh.exchange.stl import export_stl, export_stl_ascii
 
 from gridfinity_rebase import RebaseError
 from gridfinity_rebase.catalog import PRESETS
@@ -54,7 +55,7 @@ def test_stl_roundtrip_and_atomic_write(tmp_path):
 def test_ascii_and_broken_stl(tmp_path):
     path = tmp_path / "cube.stl"
     cube = trimesh.creation.box()
-    path.write_text(trimesh.exchange.stl.export_stl_ascii(cube))
+    path.write_text(export_stl_ascii(cube))
     assert read_stl(path).volume() == pytest.approx(1)
     path.write_bytes(b"solid broken\nfacet normal 0 0 0\nvertex 1 2 3\nendsolid")
     with pytest.raises(RebaseError, match="incomplete"):
@@ -63,7 +64,7 @@ def test_ascii_and_broken_stl(tmp_path):
     with pytest.raises(RebaseError, match="invalid STL"):
         read_stl(path)
     cube.update_faces(list(range(len(cube.faces) - 1)))
-    path.write_bytes(trimesh.exchange.stl.export_stl(cube))
+    path.write_bytes(export_stl(cube))
     with pytest.raises(RebaseError, match="not a closed"):
         read_stl(path)
 

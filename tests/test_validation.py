@@ -36,10 +36,11 @@ def test_square_corner_frustum_is_not_a_gridfinity_foot():
             ]
         )
     # Hull of the lower two and upper two rings retains the vertical stage.
+    points = np.asarray(rings, dtype=np.float64)
     solid = (
-        m.Manifold.hull_points(rings[:8])
-        + m.Manifold.hull_points(rings[4:12])
-        + m.Manifold.hull_points(rings[8:])
+        m.Manifold.hull_points(points[:8])
+        + m.Manifold.hull_points(points[4:12])
+        + m.Manifold.hull_points(points[8:])
     )
     with pytest.raises(RebaseError, match="rounded corners"):
         detect_grid(solid)
