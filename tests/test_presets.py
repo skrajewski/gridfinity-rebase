@@ -53,7 +53,7 @@ def test_side_loading_opening_and_screw_dimensions(preset):
         4 * np.pi * 1.5**2, rel=0.002
     )
     if preset != "rebuilt-screws":
-        assert base.slice(2.31).area() == pytest.approx(solid.slice(2.31).area())
+        assert base.slice(2.51).area() == pytest.approx(solid.slice(2.51).area())
         # A floor retains the magnet below the side-loading pocket.
         floor = m.Manifold.cube((1, 1, 0.2)).translate((12.5, 12.5, 0.1))
         assert (base ^ floor).volume() == pytest.approx(0.2)
@@ -61,8 +61,8 @@ def test_side_loading_opening_and_screw_dimensions(preset):
     probe = m.Manifold.cube((1, 2, 1)).translate((17.5, 12, 0.5))
     assert (base ^ probe).volume() < 1e-8
     assert (solid ^ probe).volume() > 1.9
-    # 5.86 mm pocket width and 1.9 mm height, above a 0.4 mm floor.
-    cavity = m.Manifold.cube((0.5, 5.86, 1.9)).translate((13.25, 10.07, 0.4))
+    # 5.86 mm pocket width and 2.1 mm height, above a 0.4 mm floor.
+    cavity = m.Manifold.cube((0.5, 5.86, 2.1)).translate((13.25, 10.07, 0.4))
     assert (base ^ cavity).volume() < 1e-8
     wall = m.Manifold.cube((0.5, 0.2, 1)).translate((12.75, 15.95, 0.5))
     assert (base ^ wall).volume() == pytest.approx(0.1)

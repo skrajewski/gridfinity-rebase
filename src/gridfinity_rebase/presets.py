@@ -13,7 +13,7 @@ import numpy as np
 from .catalog import PRESETS, resolve_options
 from .errors import RebaseError
 from .geometry import PITCH, PROFILE_HEIGHT, Grid
-from .options import BaseOptions
+from .options import DEFAULT_SIDE_POCKET_HEIGHT_MM, BaseOptions
 
 __all__ = ["PRESETS", "generate_base", "preset_base"]
 
@@ -75,13 +75,15 @@ def cylinder(radius, bottom, top, segments):
     ).translate((0, 0, bottom))
 
 
-def side_loading_pocket(segments):
+def side_loading_pocket(segments, height=DEFAULT_SIDE_POCKET_HEIGHT_MM):
     # Port of Rebuilt's refined_hole(): opening toward +X, bottom at 0.4.
-    pocket = cylinder(2.93, 0.4, 2.3, segments) + m.Manifold.cube(
-        (11, 5.86, 1.9)
+    bottom = 0.4
+    top = bottom + height
+    pocket = cylinder(2.93, bottom, top, segments) + m.Manifold.cube(
+        (11, 5.86, height)
     ).translate((0, -2.93, 0.4))
-    removal = cylinder(1.25, -0.2, 2.3, segments).translate((-6.93, 0, 0))
-    removal += m.Manifold.cube((4.4, 2.5, 2.5)).translate((-6.93, -1.25, -0.2))
+    removal = cylinder(1.25, -0.2, top, segments).translate((-6.93, 0, 0))
+    removal += m.Manifold.cube((4.4, 2.5, top + 0.2)).translate((-6.93, -1.25, -0.2))
     return pocket + removal
 
 
@@ -145,7 +147,7 @@ def single_foot(options: BaseOptions, segments, corners=HOLE_CORNERS):
         return foot
     hole = m.Manifold()
     if options.magnets == "side":
-        hole = side_loading_pocket(segments)
+        hole = side_loading_pocket(segments, options.effective_side_pocket_height_mm)
     elif options.magnets == "bottom" and options.crush_ribs:
         angle = np.linspace(0, 2 * np.pi, segments, endpoint=False)
         radius = 3.1 + 0.15 * np.sin(8 * angle)

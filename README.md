@@ -42,7 +42,11 @@ gridfinity-rebase presets
 
 ## Presets
 
-Available presets: `plain`, `rebuilt`, `rebuilt-screws` and `press-fit`.
+Available presets: `plain`, `rebuilt`, `rebuilt-screws`, `side-2mm` and `press-fit`.
+All side-loading pockets default to 2.1 mm high, including `rebuilt`,
+`rebuilt-screws`, `refined`, `side-2mm` and `--magnets side`. This matches the
+measured generator reference for 2 mm thick magnets. The pocket width remains
+5.86 mm. Use `--side-pocket-height 1.9` to request the previous upstream height.
 
 Alias: `standard` → `plain`.
 

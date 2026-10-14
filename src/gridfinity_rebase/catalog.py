@@ -8,8 +8,9 @@ from .options import BaseOptions
 
 PRESETS = {
     "plain": "Plain mating foot, no magnet or screw holes",
-    "rebuilt": "Rebuilt/Refined fan pattern of side-loading 5.86 x 1.9 mm magnet pockets and removal slots",
+    "rebuilt": "Rebuilt/Refined fan pattern of side-loading 5.86 x 2.1 mm magnet pockets and removal slots",
     "rebuilt-screws": "Rebuilt fan pattern of side-loading magnet pockets + 3 mm screw bores (depth limited to replacement height)",
+    "side-2mm": "Side-loading 5.86 x 2.1 mm pockets, matching the measured Perplexing Labs reference for 2 mm magnets",
     "press-fit": "Rebuilt bottom magnet pockets with 8 crush ribs (5.9–6.5 mm diameter)",
     "refined": "Alias of rebuilt: side-loading magnet pockets",
     "standard": "Alias of plain: no magnet or screw holes",
@@ -21,6 +22,7 @@ PRESET_OPTIONS = {
     "plain": BaseOptions(),
     "rebuilt": BaseOptions(magnets="side"),
     "rebuilt-screws": BaseOptions(magnets="side", screws=True),
+    "side-2mm": BaseOptions(magnets="side"),
     "press-fit": BaseOptions(magnets="bottom", crush_ribs=True),
 }
 
@@ -56,6 +58,7 @@ def resolve_options(
     crush_ribs: bool | None = None,
     thumbscrew: bool | None = None,
     only_corners: bool | None = None,
+    side_pocket_height_mm: float | None = None,
 ) -> BaseOptions:
     """Apply explicit overrides to a preset; None means keep its setting."""
     if preset not in PRESETS:
@@ -73,6 +76,7 @@ def resolve_options(
             "crush_ribs": crush_ribs,
             "thumbscrew": thumbscrew,
             "only_corners": only_corners,
+            "side_pocket_height_mm": side_pocket_height_mm,
         }.items()
         if value is not None
     }
@@ -80,4 +84,6 @@ def resolve_options(
     # An explicit --crush-ribs still fails validation for other magnet styles.
     if magnets is not None and magnets != "bottom" and crush_ribs is None:
         overrides["crush_ribs"] = False
+    if magnets is not None and magnets != "side" and side_pocket_height_mm is None:
+        overrides["side_pocket_height_mm"] = None
     return replace(options, **overrides)

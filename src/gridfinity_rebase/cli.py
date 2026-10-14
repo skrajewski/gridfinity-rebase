@@ -55,7 +55,7 @@ class HelpFormatter(argparse.RawDescriptionHelpFormatter):
             r"(?P<option>--[\w-]+|(?<!\w)-[a-zA-Z]\b)"
             r"|(?P<program>\bgridfinity-rebase\b)"
             r"|(?P<file>\b[\w.-]+\.stl\b)"
-            r"|(?P<preset>\b(?:rebuilt-screws|press-fit|rebuilt|refined|standard|plain)\b)",
+            r"|(?P<preset>\b(?:rebuilt-screws|side-2mm|press-fit|rebuilt|refined|standard|plain)\b)",
             style_token,
             formatted,
         )
@@ -140,7 +140,7 @@ def parser():
         ),
         epilog=(
             "Presets\n"
-            "  plain, rebuilt, rebuilt-screws, press-fit\n"
+            "  plain, rebuilt, rebuilt-screws, side-2mm, press-fit\n"
             "  Aliases: refined = rebuilt; standard = plain\n\n"
             "Examples\n"
             "  gridfinity-rebase rebase bin.stl --screws\n"
@@ -176,6 +176,13 @@ def parser():
         choices=("none", "side", "bottom"),
         metavar="STYLE",
         help="Magnet pockets: none, side, bottom",
+    )
+    geometry.add_argument(
+        "--side-pocket-height",
+        dest="side_pocket_height_mm",
+        type=float,
+        metavar="MM",
+        help="Actual side pocket height (default: 2.1 mm; requires side magnets)",
     )
     geometry.add_argument(
         "--screws",
@@ -256,11 +263,14 @@ def main(argv=None):
                     "crush_ribs",
                     "thumbscrew",
                     "only_corners",
+                    "side_pocket_height_mm",
                 )
             }
             if args.base:
                 flags = [
-                    ("--no-" if value is False else "--") + name.replace("_", "-")
+                    "--side-pocket-height"
+                    if name == "side_pocket_height_mm"
+                    else ("--no-" if value is False else "--") + name.replace("_", "-")
                     for name, value in overrides.items()
                     if value is not None
                 ]

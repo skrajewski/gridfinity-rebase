@@ -17,14 +17,32 @@ without claiming a download ranking.
 | `plain` | Standard profile without magnet pockets or screw holes. |
 | `rebuilt` | Side-loading magnet pockets with a floor and removal slot, arranged in a fan pattern with one opening per edge of the foot. |
 | `rebuilt-screws` | Same as `rebuilt`, with additional screw bores extending to the cut height, up to 7 mm. |
+| `side-2mm` | Side-loading pockets, 5.86 mm wide and 2.1 mm high above a 0.4 mm floor, matching the measured Perplexing Labs bin. |
 | `press-fit` | Bottom-loading pockets with eight crush ribs for press-fitting magnets. |
 | `refined` | Alias of `rebuilt`: identical side-loading magnet geometry. |
 | `standard` | Alias of `plain`: identical geometry without holes. |
 
 `rebuilt` and `refined` use the same Rebuilt/Refined side-pocket geometry:
-5.86 mm wide, 1.9 mm high, with a 0.4 mm floor. `rebuilt-screws` adds screw
+5.86 mm wide, 2.1 mm high, with a 0.4 mm floor. `rebuilt-screws` adds screw
 bores to those pockets. The older names `refined` and `standard` remain
 supported as aliases.
+
+All side-loading pockets now default to 2.1 mm high, matching the measured
+Perplexing Labs reference `gf-rebuilt-bin-1x1x6-s1x1-Standard-42ae2.stl`.
+This intentionally differs from the pinned upstream's 1.9 mm height, which
+implies 0.1 mm vertical interference for a 2 mm thick magnet. The default
+applies to `rebuilt`, `rebuilt-screws`, `refined`, `side-2mm` and `--magnets side`.
+Use an explicit height to reproduce the previous geometry:
+
+```sh
+gridfinity-rebase rebase bin.stl --preset rebuilt
+gridfinity-rebase rebase bin.stl --preset rebuilt --side-pocket-height 1.9
+```
+
+The default leaves the 5.86 mm pocket width and 0.4 mm floor unchanged; the
+roof is at 2.5 mm above the foot bottom. The removal slit reaches the same roof.
+`side-2mm` still squeezes a nominal 6 mm magnet horizontally. Its name describes
+the intended magnet thickness, not a guarantee of fit for every print.
 
 ## Independent geometry options
 
@@ -33,6 +51,9 @@ order: defaults (`plain`), the selected preset, then explicit flags. Running
 `rebase` without a preset or donor generates a `plain` base.
 
 - `--magnets none|side|bottom` selects the magnet pocket style.
+- `--side-pocket-height MM` sets the actual side-pocket height, independently
+  of nominal magnet thickness. It requires side pockets and must be positive,
+  finite and below 4.35 mm, retaining material above the pocket in the foot.
 - `--screws` and `--no-screws` enable or disable Ø3 mm screw bores,
   independently of magnets. Their depth is the cut height, up to 7 mm.
 - `--crush-ribs` and `--no-crush-ribs` control ribs in bottom-loading pockets.
@@ -70,12 +91,16 @@ gridfinity-rebase rebase bin.stl --magnets bottom --no-crush-ribs
 gridfinity-rebase rebase bin.stl --preset rebuilt-screws --no-screws
 ```
 
-Existing preset commands keep their geometry and output filenames.
+Existing preset output filenames are retained; side-pocket height has changed
+from 1.9 to 2.1 mm by default. Use the explicit height above for old geometry.
 Modified configurations receive a descriptive filename, such as
 `bin-rebased-screws.stl` or `bin-rebased-magnets-bottom-crush-ribs-screws.stl`.
 The JSON report includes a `geometry` object with the resolved `magnets`,
 `screws`, `crush_ribs`, `thumbscrew` and `only_corners` settings. The `base`
 field identifies the starting preset (default: `plain`) or donor path.
+The `geometry.side_pocket_height_mm` field reports the effective height
+(2.1 mm by default), or `null` without
+side pockets. A custom height appears in the output filename.
 
 `--only-corners` selects hole positions without enabling magnets or screws
 by itself. The output filename receives an `-only-corners` suffix, such as
