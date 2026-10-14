@@ -1,8 +1,9 @@
 """Preset descriptions, kept importable without loading the geometry engine."""
 
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from typing import Literal
 
-from . import RebaseError
+from .errors import RebaseError
 from .options import BaseOptions
 
 PRESETS = {
@@ -24,18 +25,45 @@ PRESET_OPTIONS = {
 }
 
 
+@dataclass(frozen=True)
+class Preset:
+    """Preset metadata; aliases have the same options as their canonical preset."""
+
+    id: str
+    description: str
+    options: BaseOptions
+    alias_of: str | None = None
+
+
+def list_presets() -> tuple[Preset, ...]:
+    """Return presets and compatibility aliases without loading geometry."""
+    return tuple(
+        Preset(
+            name,
+            description,
+            PRESET_OPTIONS[ALIASES.get(name, name)],
+            ALIASES.get(name),
+        )
+        for name, description in PRESETS.items()
+    )
+
+
 def resolve_options(
-    preset="plain",
+    preset: str = "plain",
     *,
-    magnets=None,
-    screws=None,
-    crush_ribs=None,
-    thumbscrew=None,
-    only_corners=None,
-):
+    magnets: Literal["none", "side", "bottom"] | None = None,
+    screws: bool | None = None,
+    crush_ribs: bool | None = None,
+    thumbscrew: bool | None = None,
+    only_corners: bool | None = None,
+) -> BaseOptions:
     """Apply explicit overrides to a preset; None means keep its setting."""
     if preset not in PRESETS:
-        raise RebaseError(f"Unknown preset: {preset}")
+        raise RebaseError(
+            f"Unknown preset: {preset}",
+            code="unknown_preset",
+            details={"preset": preset},
+        )
     options = PRESET_OPTIONS[ALIASES.get(preset, preset)]
     overrides = {
         name: value

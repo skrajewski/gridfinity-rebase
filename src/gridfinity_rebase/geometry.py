@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import manifold3d as m
 import numpy as np
 
-from . import RebaseError
+from .errors import RebaseError
 
 PITCH = 42.0
 PROFILE_HEIGHT = 4.75
@@ -297,7 +297,8 @@ def replace_base(solid, replacement, grid: Grid, height=PROFILE_HEIGHT):
         replacement_section - original_section.offset(0.12)
     ).area() > 0.2 * grid.nx * grid.ny:
         raise RebaseError(
-            "Replacement does not fit the input at the seam; choose a matching donor or a lower --base-height"
+            "Replacement does not fit the input at the seam; choose a matching donor or a lower --base-height",
+            code="incompatible_seam",
         )
     upper = solid.trim_by_plane((0, 0, 1), seam)
 
@@ -321,6 +322,7 @@ def replace_base(solid, replacement, grid: Grid, height=PROFILE_HEIGHT):
         part.volume() > 0 for part in solid.decompose()
     ):
         raise RebaseError(
-            "Replacement would leave disconnected feet; check the donor and --base-height"
+            "Replacement would leave disconnected feet; check the donor and --base-height",
+            code="disconnected_result",
         )
     return result

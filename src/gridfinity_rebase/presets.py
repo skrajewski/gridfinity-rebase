@@ -10,8 +10,8 @@ from functools import lru_cache
 import manifold3d as m
 import numpy as np
 
-from . import RebaseError
 from .catalog import PRESETS, resolve_options
+from .errors import RebaseError
 from .geometry import PITCH, PROFILE_HEIGHT, Grid
 from .options import BaseOptions
 

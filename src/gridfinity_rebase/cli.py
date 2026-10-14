@@ -6,6 +6,7 @@ import sys
 import textwrap
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 from . import RebaseError, __version__
 
@@ -161,11 +162,11 @@ def parser():
     choice.add_argument(
         "--base", type=Path, metavar="FILE", help="Copy the base from a donor STL"
     )
-    from .catalog import PRESETS
+    from . import list_presets
 
     choice.add_argument(
         "--preset",
-        choices=PRESETS,
+        choices=tuple(preset.id for preset in list_presets()),
         metavar="NAME",
         help="Starting settings (default: plain)",
     )
@@ -243,7 +244,7 @@ def main(argv=None):
         return 0
     args = argument_parser.parse_args(argv)
     try:
-        from .catalog import PRESETS, resolve_options
+        from . import list_presets, resolve_options
 
         options = None
         if args.command == "rebase":
@@ -270,40 +271,28 @@ def main(argv=None):
             else:
                 options = resolve_options(args.preset or "plain", **overrides)
         if args.command == "presets":
+            presets = {preset.id: preset.description for preset in list_presets()}
             print(
-                json.dumps(PRESETS)
+                json.dumps(presets)
                 if args.json
                 else "\n".join(
-                    f"{name:16} {description}" for name, description in PRESETS.items()
+                    f"{name:16} {description}" for name, description in presets.items()
                 )
             )
             return 0
-        from .geometry import (
-            detect_grid,
-            detect_standard_base,
-            donor_base,
-            replace_base,
-            validate_height,
+        from . import (
+            DonorBase,
+            GeneratedBase,
+            inspect_model,
+            load_stl,
+            rebase,
+            save_stl,
         )
-        from .presets import generate_base
-        from .stl import read_stl, write_stl
 
-        solid = read_stl(args.input)
-        grid = detect_grid(solid, str(args.input))
-        report = {
-            "input": str(args.input),
-            **grid.describe(),
-            "triangles": solid.num_tri(),
-        }
-        if args.command == "inspect" or args.base_height is None:
-            try:
-                standard = detect_standard_base(solid, grid, str(args.input))
-            except RebaseError as exc:
-                if args.command != "inspect":
-                    raise
-                report.update(standard_bin=False, base_detection_error=str(exc))
-            else:
-                report.update(standard.describe())
+        model = load_stl(args.input)
+        report: dict[str, Any] = {"input": str(args.input)}
+        if args.command == "inspect":
+            report.update(inspect_model(model).describe())
         if args.command == "rebase":
             preset_suffix = ""
             if options is not None:
@@ -327,35 +316,19 @@ def main(argv=None):
                 raise RebaseError("Output must differ from both source files")
             if output.exists() and not args.overwrite:
                 raise RebaseError(f"Output already exists: {output}; use --overwrite")
-            height = (
-                args.base_height if args.base_height is not None else standard.height
+            base = (
+                GeneratedBase(options, args.segments)
+                if options is not None
+                else DonorBase(load_stl(args.base))
             )
-            validate_height(solid, grid, height)
-            if options is not None:
-                replacement = generate_base(options, grid, height, args.segments)
-            else:
-                donor = read_stl(args.base)
-                donor_grid = detect_grid(donor, str(args.base))
-                if args.base_height is None:
-                    donor_standard = detect_standard_base(
-                        donor, donor_grid, str(args.base)
-                    )
-                    if donor_standard.height < height - 0.001:
-                        raise RebaseError(
-                            f"Donor base ends at {donor_standard.height:g} mm, before the input's {height:g} mm cut; use a compatible donor or set --base-height explicitly"
-                        )
-                replacement = donor_base(donor, donor_grid, grid, height)
-            result = replace_base(solid, replacement, grid, height)
-            triangles = write_stl(result, output, overwrite=args.overwrite)
+            result = rebase(model, base=base, base_height_mm=args.base_height)
+            triangles = save_stl(result.model, output, overwrite=args.overwrite)
+            report.update(result.report.describe())
             report.update(
                 output=str(output),
                 base=(args.preset or "plain")
                 if options is not None
                 else str(args.base),
-                base_height_mm=height,
-                base_height_mode="manual" if args.base_height is not None else "auto",
-                thumbscrew=options.thumbscrew if options is not None else None,
-                geometry=options.describe() if options is not None else None,
                 triangles=triangles,
             )
         report["elapsed_ms"] = round((perf_counter() - start) * 1000, 2)
@@ -367,12 +340,14 @@ def main(argv=None):
                 if report["standard_bin"]
                 else "custom model; explicit --base-height required"
             )
+            nx, ny = report["grid"]
             print(
-                f"Gridfinity {grid.nx}x{grid.ny}, {detail}, {solid.num_tri():,} triangles ({report['elapsed_ms']:g} ms)"
+                f"Gridfinity {nx}x{ny}, {detail}, {report['triangles']:,} triangles ({report['elapsed_ms']:g} ms)"
             )
         else:
+            nx, ny = report["grid"]
             print(
-                f"{report['output']} — {grid.nx}x{grid.ny}, {report['triangles']:,} triangles ({report['elapsed_ms']:g} ms)"
+                f"{report['output']} — {nx}x{ny}, {report['triangles']:,} triangles ({report['elapsed_ms']:g} ms)"
             )
         return 0
     except RebaseError as exc:
