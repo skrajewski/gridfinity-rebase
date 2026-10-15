@@ -282,6 +282,45 @@ def validate_height(solid, grid: Grid, height):
         )
 
 
+def _remove_planar_seam_shells(solid, seam):
+    # Face-to-face booleans can leave isolated shells entirely on the snapped
+    # cut plane. Their signed volume can round slightly above or below zero.
+    # Remove only these zero-thickness shells, never small volumetric parts.
+    parts = solid.decompose()
+    kept = [
+        part
+        for part in parts
+        if not part.bounding_box()[2] == part.bounding_box()[5] == seam
+    ]
+    if len(kept) == len(parts):
+        return solid
+    if not kept:
+        return m.Manifold()
+    if len(kept) == 1:
+        return kept[0]
+
+    # Concatenate oriented shells rather than unioning them: a negative-volume
+    # shell must remain an enclosed cavity, not be filled by a boolean union.
+    vertices, triangles, merge_from, merge_to = [], [], [], []
+    offset = 0
+    for part in kept:
+        mesh = part.to_mesh64()
+        vertices.append(mesh.vert_properties)
+        triangles.append(mesh.tri_verts + offset)
+        merge_from.append(np.asarray(mesh.merge_from_vert, dtype=np.uint64) + offset)
+        merge_to.append(np.asarray(mesh.merge_to_vert, dtype=np.uint64) + offset)
+        offset += len(mesh.vert_properties)
+    return m.Manifold(
+        m.Mesh64(
+            np.concatenate(vertices),
+            np.concatenate(triangles),
+            merge_from_vert=np.concatenate(merge_from),
+            merge_to_vert=np.concatenate(merge_to),
+            tolerance=solid.get_tolerance(),
+        )
+    )
+
+
 def replace_base(solid, replacement, grid: Grid, height=PROFILE_HEIGHT):
     validate_height(solid, grid, height)
     seam = grid.z + height
@@ -311,7 +350,7 @@ def replace_base(solid, replacement, grid: Grid, height=PROFILE_HEIGHT):
 
     upper = upper.warp_batch(snap_cap)
     replacement = replacement.warp_batch(snap_cap)
-    result = upper + replacement
+    result = _remove_planar_seam_shells(upper + replacement, seam)
     if result.status() != m.Error.NoError or result.is_empty() or result.volume() <= 0:
         raise RebaseError(
             f"Replacement failed to produce a valid solid: {result.status().name}"
