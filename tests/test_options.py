@@ -20,7 +20,7 @@ from gridfinity_rebase.presets import generate_base
 from gridfinity_rebase.stl import read_stl, write_stl
 
 
-@pytest.mark.parametrize("preset", ["rebuilt", "refined", "rebuilt-screws"])
+@pytest.mark.parametrize("preset", ["rebuilt", "refined"])
 def test_explicit_overrides_keep_unmentioned_settings(preset):
     options = resolve_options(preset, screws=False, thumbscrew=True)
     assert options == BaseOptions(magnets="side", thumbscrew=True)
@@ -110,6 +110,16 @@ def test_screw_only_depth_is_limited_to_cut_or_seven_mm(height):
     "flags,expected,suffix",
     [
         ([], BaseOptions(), "plain"),
+        (
+            ["--preset", "magnet-holes"],
+            BaseOptions(magnets="bottom"),
+            "magnet-holes",
+        ),
+        (
+            ["--preset", "magnet-holes", "--crush-ribs"],
+            BaseOptions(magnets="bottom", crush_ribs=True),
+            "magnets-bottom-crush-ribs",
+        ),
         (["--screws"], BaseOptions(screws=True), "screws"),
         (
             ["--magnets", "side", "--screws"],
@@ -127,9 +137,9 @@ def test_screw_only_depth_is_limited_to_cut_or_seven_mm(height):
             "magnets-bottom",
         ),
         (
-            ["--preset", "rebuilt-screws", "--no-screws"],
+            ["--preset", "rebuilt", "--no-screws"],
             BaseOptions(magnets="side"),
-            "magnets-side",
+            "rebuilt",
         ),
         (
             ["--preset", "press-fit", "--screws"],
@@ -214,7 +224,7 @@ def test_donor_report_does_not_claim_generated_geometry(tmp_path, capsys):
     source = tmp_path / "bin.stl"
     donor = tmp_path / "donor.stl"
     write_stl(make_bin(), source)
-    write_stl(make_bin(preset="rebuilt-screws"), donor)
+    write_stl(make_bin(preset="rebuilt", screws=True), donor)
     assert main(["rebase", str(source), "--base", str(donor), "--json"]) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["base"] == str(donor)

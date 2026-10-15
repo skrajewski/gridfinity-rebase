@@ -13,7 +13,7 @@ from gridfinity_rebase.stl import FACET, read_stl, write_stl
 
 
 def test_incorrect_pitch_incomplete_grid_and_units():
-    foot = preset_base("standard", Grid(1, 1, 0, 0, 0))
+    foot = preset_base("plain", Grid(1, 1, 0, 0, 0))
     bad_pitch = foot + foot.translate((40, 0, 0))
     with pytest.raises(RebaseError, match="42 mm grid"):
         detect_grid(bad_pitch)
@@ -49,7 +49,7 @@ def test_square_corner_frustum_is_not_a_gridfinity_foot():
 def test_donor_and_seam_incompatibility():
     source = make_bin()
     grid = detect_grid(source)
-    short = preset_base("standard", grid)
+    short = preset_base("plain", grid)
     with pytest.raises(RebaseError, match="shorter"):
         donor_base(short, grid, grid, 7)
     off_axis = short.translate((1, 0, 0))

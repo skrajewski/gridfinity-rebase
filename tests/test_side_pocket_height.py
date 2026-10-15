@@ -19,7 +19,6 @@ from gridfinity_rebase.stl import read_stl, write_stl
         (["--preset", "rebuilt"], "rebuilt"),
         (["--preset", "refined"], "refined"),
         (["--magnets", "side"], "magnets-side"),
-        (["--preset", "side-2mm"], "side-2mm"),
         (
             ["--preset", "rebuilt", "--side-pocket-height", "2.1"],
             "magnets-side",
@@ -84,7 +83,7 @@ def test_measured_reference_accepts_same_vertical_clearance():
 def test_explicit_height_changes_pocket_and_removal_slit_together(height):
     grid = detect_grid(make_bin())
     base = generate_base(
-        resolve_options("rebuilt-screws", side_pocket_height_mm=height), grid, 7
+        resolve_options("rebuilt", screws=True, side_pocket_height_mm=height), grid, 7
     )
     # Check beyond the screw bore and in the underside removal slit.
     for x, floor in [(15, 0.4), (7, 0.0)]:
@@ -105,16 +104,16 @@ def test_invalid_heights_are_rejected(height):
 
 
 def test_height_overrides_and_magnet_style_changes():
-    assert resolve_options("side-2mm").effective_side_pocket_height_mm == 2.1
+    assert resolve_options("rebuilt").effective_side_pocket_height_mm == 2.1
     assert resolve_options("rebuilt").describe()["side_pocket_height_mm"] == 2.1
     assert (
-        resolve_options("side-2mm", side_pocket_height_mm=2.3).side_pocket_height_mm
+        resolve_options("rebuilt", side_pocket_height_mm=2.3).side_pocket_height_mm
         == 2.3
     )
     for style in ("none", "bottom"):
-        assert resolve_options("side-2mm", magnets=style).side_pocket_height_mm is None
+        assert resolve_options("rebuilt", magnets=style).side_pocket_height_mm is None
         with pytest.raises(RebaseError, match="requires --magnets side"):
-            resolve_options("side-2mm", magnets=style, side_pocket_height_mm=2.1)
+            resolve_options("rebuilt", magnets=style, side_pocket_height_mm=2.1)
 
 
 @pytest.mark.parametrize(

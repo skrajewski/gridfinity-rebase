@@ -6,15 +6,16 @@ import pytest
 import trimesh
 
 from gridfinity_rebase import RebaseError
+from gridfinity_rebase.catalog import resolve_options
 from gridfinity_rebase.cli import main
 from gridfinity_rebase.geometry import Grid, detect_grid, donor_base, replace_base
-from gridfinity_rebase.presets import PRESETS, preset_base, rounded_prism
+from gridfinity_rebase.presets import PRESETS, generate_base, preset_base, rounded_prism
 from gridfinity_rebase.stl import write_stl
 
 
-def make_bin(nx=1, ny=1, preset="standard", origin=(0, 0, 0)):
+def make_bin(nx=1, ny=1, preset="plain", origin=(0, 0, 0), *, screws=None):
     grid = Grid(nx, ny, 0, 0, 0)
-    base = preset_base(preset, grid, 7)
+    base = generate_base(resolve_options(preset, screws=screws), grid, 7)
     body = rounded_prism(nx * 42 - 0.5, ny * 42 - 0.5, 3.75, 7, 21)
     body = body.translate(((nx - 1) * 21, (ny - 1) * 21, 0))
     cavity = m.Manifold.cube((nx * 42 - 4.5, ny * 42 - 4.5, 20)).translate(
@@ -43,16 +44,32 @@ def test_every_preset_on_multiple_grids(preset, size, tmp_path):
     assert len(mesh.split()) == 1
 
 
-@pytest.mark.parametrize("preset", ["rebuilt", "refined", "rebuilt-screws"])
-def test_side_loading_opening_and_screw_dimensions(preset):
+def test_magnet_holes_dimensions():
+    grid = Grid(1, 1, 0, 0, 0)
+    plain = preset_base("plain", grid)
+    base = preset_base("magnet-holes", grid)
+    for x, y in ((13, 13), (-13, 13), (-13, -13), (13, -13)):
+        probe = m.Manifold.cube((8, 8, 3)).translate((x - 4, y - 4, 0))
+        assert (probe - base).bounding_box() == pytest.approx(
+            (x - 3.25, y - 3.25, 0, x + 3.25, y + 3.25, 2.4)
+        )
+    assert plain.slice(1).area() - base.slice(1).area() == pytest.approx(
+        4 * np.pi * 3.25**2, rel=0.002
+    )
+    assert base.slice(2.41).area() == pytest.approx(plain.slice(2.41).area())
+
+
+@pytest.mark.parametrize("preset", ["rebuilt", "refined"])
+@pytest.mark.parametrize("screws", [False, True])
+def test_side_loading_opening_and_screw_dimensions(preset, screws):
     grid = Grid(1, 1, 0, 0, 0)
     solid = preset_base("plain", grid)
-    base = preset_base(preset, grid)
-    screw = preset_base("rebuilt-screws", grid)
+    base = generate_base(resolve_options(preset, screws=screws), grid)
+    screw = generate_base(resolve_options("rebuilt", screws=True), grid)
     assert solid.slice(3).area() - screw.slice(3).area() == pytest.approx(
         4 * np.pi * 1.5**2, rel=0.002
     )
-    if preset != "rebuilt-screws":
+    if not screws:
         assert base.slice(2.51).area() == pytest.approx(solid.slice(2.51).area())
         # A floor retains the magnet below the side-loading pocket.
         floor = m.Manifold.cube((1, 1, 0.2)).translate((12.5, 12.5, 0.1))
@@ -68,12 +85,15 @@ def test_side_loading_opening_and_screw_dimensions(preset):
     assert (base ^ wall).volume() == pytest.approx(0.1)
 
 
-@pytest.mark.parametrize("preset", ["rebuilt", "refined", "rebuilt-screws"])
+@pytest.mark.parametrize("preset", ["rebuilt", "refined"])
+@pytest.mark.parametrize("screws", [False, True])
 @pytest.mark.parametrize("size", [(1, 1), (1, 3), (3, 1), (2, 3), (3, 2), (3, 3)])
 @pytest.mark.parametrize("segments", [32, 64, 256])
-def test_side_loading_fan_on_every_foot(preset, size: tuple[int, int], segments):
+def test_side_loading_fan_on_every_foot(
+    preset, screws, size: tuple[int, int], segments
+):
     grid = Grid(*size, 105, -23, -11)
-    base = preset_base(preset, grid, 7, segments)
+    base = generate_base(resolve_options(preset, screws=screws), grid, 7, segments)
     # Independent expected directions from Rebuilt's _base_holes().
     corners = [
         ((13, 13), (1, 0)),
@@ -104,9 +124,7 @@ def test_side_loading_fan_on_every_foot(preset, size: tuple[int, int], segments)
             assert (base ^ slit).volume() < 1e-8
 
 
-@pytest.mark.parametrize(
-    "alias,canonical", [("refined", "rebuilt"), ("standard", "plain")]
-)
+@pytest.mark.parametrize("alias,canonical", [("refined", "rebuilt")])
 def test_aliases_export_identical_geometry(alias, canonical, tmp_path, capsys):
     source = tmp_path / "input.stl"
     write_stl(make_bin(), source)
@@ -143,18 +161,20 @@ def test_tiled_donor_and_transposed_grid():
 def test_bridge_replacement_and_screw_depth():
     source = make_bin(2, 3)
     grid = detect_grid(source)
-    result = replace_base(source, preset_base("rebuilt-screws", grid, 7), grid, 7)
+    result = replace_base(
+        source, generate_base(resolve_options("rebuilt", screws=True), grid, 7), grid, 7
+    )
     assert len(result.decompose()) == 1
-    standard = preset_base("standard", grid, 7)
+    standard = preset_base("plain", grid, 7)
     assert standard.slice(6).area() - result.slice(6).area() == pytest.approx(
         24 * np.pi * 1.5**2, rel=0.002
     )
 
 
 def test_enclosed_old_holes_are_not_detached_feet():
-    source = make_bin(preset="rebuilt-screws")
+    source = make_bin(preset="rebuilt", screws=True)
     grid = detect_grid(source)
-    result = replace_base(source, preset_base("standard", grid), grid)
+    result = replace_base(source, preset_base("plain", grid), grid)
     assert sum(c.volume() > 0 for c in result.decompose()) == 1
     # The preserved bridge can contain enclosed void shells above the cut.
     assert len(result.decompose()) > 1
@@ -209,14 +229,14 @@ def test_cli_end_to_end_and_safe_source_files(tmp_path, capsys):
         == 2
     )
     assert source.read_bytes() == original
-    assert main(["rebase", str(source), "--preset", "standard", "-o", str(output)]) == 2
+    assert main(["rebase", str(source), "--preset", "plain", "-o", str(output)]) == 2
     assert (
         main(
             [
                 "rebase",
                 str(source),
                 "--preset",
-                "standard",
+                "plain",
                 "-o",
                 str(output),
                 "--overwrite",

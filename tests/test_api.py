@@ -24,7 +24,7 @@ from gridfinity_rebase import (
 )
 from gridfinity_rebase.cli import main
 from gridfinity_rebase.geometry import detect_grid
-from gridfinity_rebase.presets import preset_base
+from gridfinity_rebase.presets import generate_base
 from gridfinity_rebase.stl import read_stl, write_stl
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -51,8 +51,11 @@ def test_reuse_model_without_io_or_mutation(tmp_path, monkeypatch, capsys):
 
     monkeypatch.setattr("gridfinity_rebase.api.read_stl", unexpected_read)
     results = [
-        rebase(model, base=GeneratedBase(resolve_options(preset)))
-        for preset in ("plain", "rebuilt-screws")
+        rebase(model, base=GeneratedBase(options))
+        for options in (
+            resolve_options("plain"),
+            resolve_options("rebuilt", screws=True),
+        )
     ]
     assert all(result.model is not model for result in results)
     assert results[0].report.geometry == BaseOptions()
@@ -110,7 +113,8 @@ def test_donor_alignment_and_body_preservation(tmp_path, donor_size, height):
         "donor",
         nx=donor_size[0],
         ny=donor_size[1],
-        preset="rebuilt-screws",
+        preset="rebuilt",
+        screws=True,
         origin=(-66, 128, -15),
     )
     original_donor = donor.to_mesh()
@@ -130,7 +134,9 @@ def test_donor_alignment_and_body_preservation(tmp_path, donor_size, height):
     assert (original_upper - result_upper).volume() + (
         result_upper - original_upper
     ).volume() < 0.002
-    expected = preset_base("rebuilt-screws", grid, result.report.base_height_mm)
+    expected = generate_base(
+        resolve_options("rebuilt", screws=True), grid, result.report.base_height_mm
+    )
     slices = (1.4, 3.5) if height is not None else (1.4, 3.5, 6.0)
     for z in slices:
         assert solid.slice(grid.z + z).area() == pytest.approx(
@@ -235,9 +241,13 @@ def test_progress_and_callback_exception(tmp_path):
 
 def test_presets_and_validation():
     presets = {preset.id: preset for preset in list_presets()}
+    assert set(presets) == {"plain", "magnet-holes", "rebuilt", "press-fit", "refined"}
     assert presets["refined"].alias_of == "rebuilt"
     assert presets["refined"].options == presets["rebuilt"].options
     assert presets["plain"].alias_of is None
+    assert (
+        resolve_options("magnet-holes", crush_ribs=True) == presets["press-fit"].options
+    )
     with pytest.raises(RebaseError) as failure:
         resolve_options("missing")
     assert failure.value.code == "unknown_preset"
@@ -252,6 +262,13 @@ def test_presets_and_validation():
         GeneratedBase(options={})  # pyright: ignore[reportArgumentType]
     with pytest.raises(TypeError, match="load_stl"):
         Model()
+
+
+@pytest.mark.parametrize("preset", ["rebuilt-screws", "side-2mm", "standard"])
+def test_removed_presets_are_rejected(preset):
+    with pytest.raises(RebaseError) as failure:
+        resolve_options(preset)
+    assert failure.value.code == "unknown_preset"
 
 
 def test_presets_and_help_do_not_load_native_engine():

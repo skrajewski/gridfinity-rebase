@@ -8,21 +8,18 @@ from .options import BaseOptions
 
 PRESETS = {
     "plain": "Plain mating foot, no magnet or screw holes",
+    "magnet-holes": "Smooth bottom-loading 6.5 x 2.4 mm magnet pockets, no crush ribs",
     "rebuilt": "Rebuilt/Refined fan pattern of side-loading 5.86 x 2.1 mm magnet pockets and removal slots",
-    "rebuilt-screws": "Rebuilt fan pattern of side-loading magnet pockets + 3 mm screw bores (depth limited to replacement height)",
-    "side-2mm": "Side-loading 5.86 x 2.1 mm pockets, matching the measured Perplexing Labs reference for 2 mm magnets",
     "press-fit": "Rebuilt bottom magnet pockets with 8 crush ribs (5.9–6.5 mm diameter)",
     "refined": "Alias of rebuilt: side-loading magnet pockets",
-    "standard": "Alias of plain: no magnet or screw holes",
 }
 
-ALIASES = {"refined": "rebuilt", "standard": "plain"}
+ALIASES = {"refined": "rebuilt"}
 
 PRESET_OPTIONS = {
     "plain": BaseOptions(),
+    "magnet-holes": BaseOptions(magnets="bottom"),
     "rebuilt": BaseOptions(magnets="side"),
-    "rebuilt-screws": BaseOptions(magnets="side", screws=True),
-    "side-2mm": BaseOptions(magnets="side"),
     "press-fit": BaseOptions(magnets="bottom", crush_ribs=True),
 }
 

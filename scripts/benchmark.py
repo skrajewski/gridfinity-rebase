@@ -84,16 +84,15 @@ def main():
             ("1x1/" + preset, example, ["--preset", preset])
             for preset in (
                 "plain",
+                "magnet-holes",
                 "rebuilt",
-                "rebuilt-screws",
-                "refined",
                 "press-fit",
             )
         ]
         scenarios.extend(
             [
                 ("1x1/donor", example, ["--base", str(donor)]),
-                ("6x6/refined", large, ["--preset", "refined"]),
+                ("6x6/rebuilt", large, ["--preset", "rebuilt"]),
             ]
         )
         for name, source, option in scenarios:

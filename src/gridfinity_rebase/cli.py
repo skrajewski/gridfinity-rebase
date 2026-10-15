@@ -55,7 +55,7 @@ class HelpFormatter(argparse.RawDescriptionHelpFormatter):
             r"(?P<option>--[\w-]+|(?<!\w)-[a-zA-Z]\b)"
             r"|(?P<program>\bgridfinity-rebase\b)"
             r"|(?P<file>\b[\w.-]+\.stl\b)"
-            r"|(?P<preset>\b(?:rebuilt-screws|side-2mm|press-fit|rebuilt|refined|standard|plain)\b)",
+            r"|(?P<preset>\b(?:magnet-holes|press-fit|rebuilt|refined|plain)\b)",
             style_token,
             formatted,
         )
@@ -88,14 +88,16 @@ def add_help(p, *, version=False):
 def parser():
     p = argparse.ArgumentParser(
         prog="gridfinity-rebase",
-        usage="%(prog)s COMMAND [OPTIONS]",
+        usage="%(prog)s INPUT.stl [OPTIONS]\n       %(prog)s COMMAND [OPTIONS]",
         description="Replace a Gridfinity bin's base while preserving its interior.",
         formatter_class=HelpFormatter,
         add_help=False,
         epilog=(
             "Quick start\n"
-            "  gridfinity-rebase rebase bin.stl --preset rebuilt\n"
-            "  gridfinity-rebase rebase bin.stl --screws\n\n"
+            "  gridfinity-rebase bin.stl --preset rebuilt\n"
+            "  gridfinity-rebase bin.stl --screws\n\n"
+            "Default action\n"
+            "  Pass an STL file to replace its base. Explicit 'rebase' also works.\n\n"
             "More help\n"
             "  Run 'gridfinity-rebase COMMAND --help' for command options."
         ),
@@ -130,8 +132,8 @@ def parser():
     add_help(inspect)
     rebase = sub.add_parser(
         "rebase",
-        help="Replace the base of a bin STL",
-        usage="%(prog)s INPUT.stl [OPTIONS]",
+        help="Replace the base of a bin STL (default action)",
+        usage=f"{p.prog} INPUT.stl [OPTIONS]",
         formatter_class=HelpFormatter,
         add_help=False,
         description=(
@@ -140,13 +142,13 @@ def parser():
         ),
         epilog=(
             "Presets\n"
-            "  plain, rebuilt, rebuilt-screws, side-2mm, press-fit\n"
-            "  Aliases: refined = rebuilt; standard = plain\n\n"
+            "  plain, magnet-holes, rebuilt, press-fit\n"
+            "  Alias: refined = rebuilt\n\n"
             "Examples\n"
-            "  gridfinity-rebase rebase bin.stl --screws\n"
-            "  gridfinity-rebase rebase bin.stl --preset press-fit --screws\n"
-            "  gridfinity-rebase rebase bin.stl --preset rebuilt --only-corners\n"
-            "  gridfinity-rebase rebase bin.stl --base donor.stl -o result.stl\n\n"
+            "  gridfinity-rebase bin.stl --screws\n"
+            "  gridfinity-rebase bin.stl --preset press-fit --screws\n"
+            "  gridfinity-rebase bin.stl --preset rebuilt --only-corners\n"
+            "  gridfinity-rebase bin.stl --base donor.stl -o result.stl\n\n"
             "Notes\n"
             "  Use --no-screws, --no-crush-ribs or --no-thumbscrew to disable a setting.\n"
             "  Geometry overrides require a generated base; --base copies the donor as-is."
@@ -249,6 +251,9 @@ def main(argv=None):
     if not argv:
         argument_parser.print_help()
         return 0
+    # Keep explicit commands and global help/version; otherwise use the default action.
+    if argv[0] not in {"rebase", "inspect", "presets", "-h", "--help", "--version"}:
+        argv = ["rebase", *argv]
     args = argument_parser.parse_args(argv)
     try:
         from . import list_presets, resolve_options

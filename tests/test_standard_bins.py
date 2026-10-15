@@ -7,7 +7,7 @@ import trimesh
 from test_presets import make_bin
 
 from gridfinity_rebase import RebaseError
-from gridfinity_rebase.catalog import PRESETS
+from gridfinity_rebase.catalog import PRESETS, resolve_options
 from gridfinity_rebase.cli import main
 from gridfinity_rebase.geometry import (
     detect_grid,
@@ -15,7 +15,7 @@ from gridfinity_rebase.geometry import (
     donor_base,
     replace_base,
 )
-from gridfinity_rebase.presets import preset_base
+from gridfinity_rebase.presets import generate_base, preset_base
 from gridfinity_rebase.stl import read_stl, write_stl
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -57,7 +57,7 @@ def test_reference_bin_auto_replacement_preserves_interior(preset, tmp_path, cap
 
 @pytest.mark.parametrize("size", [(1, 1), (2, 3)])
 def test_auto_full_base_removes_old_screw_bores(size, tmp_path, capsys):
-    source = make_bin(*size, preset="rebuilt-screws", origin=(105, -23, -11))
+    source = make_bin(*size, preset="rebuilt", screws=True, origin=(105, -23, -11))
     grid = detect_grid(source)
     detected = detect_standard_base(source, grid)
     assert detected.height == 7
@@ -95,14 +95,14 @@ def test_standard_floor_transition_is_respected(floor):
     )
 
 
-@pytest.mark.parametrize("preset", ["rebuilt", "rebuilt-screws"])
-def test_1x1_donor_provides_continuous_full_bridge(preset, tmp_path):
+@pytest.mark.parametrize("screws", [False, True])
+def test_1x1_donor_provides_continuous_full_bridge(screws, tmp_path):
     source = make_bin(3, 2, origin=(-66, 128, -15))
-    donor = make_bin(preset=preset, origin=(200, -100, -4))
+    donor = make_bin(preset="rebuilt", screws=screws, origin=(200, -100, -4))
     target = detect_grid(source)
     replacement = donor_base(donor, detect_grid(donor), target, 7)
     result = replace_base(source, replacement, target, 7)
-    expected = preset_base(preset, target, 7)
+    expected = generate_base(resolve_options("rebuilt", screws=screws), target, 7)
     assert result.slice(target.z + 6).area() == pytest.approx(
         expected.slice(target.z + 6).area(), abs=0.002
     )

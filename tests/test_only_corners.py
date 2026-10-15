@@ -129,7 +129,7 @@ def test_corner_screw_depth_and_central_threads(height):
 @pytest.mark.parametrize(
     "flags,suffix",
     [
-        (["--preset", "rebuilt-screws"], "rebuilt-screws-only-corners"),
+        (["--preset", "rebuilt", "--screws"], "magnets-side-screws-only-corners"),
         (["--preset", "refined"], "refined-only-corners"),
         (
             ["--preset", "press-fit", "--screws"],
@@ -142,7 +142,7 @@ def test_cli_only_corners_replaces_old_holes_and_reports_settings(
     flags, suffix, tmp_path, capsys
 ):
     path = tmp_path / "bin.stl"
-    write_stl(make_bin(2, 3, preset="rebuilt-screws"), path)
+    write_stl(make_bin(2, 3, preset="rebuilt", screws=True), path)
     original = path.read_bytes()
     assert main(["rebase", str(path), *flags, "--only-corners", "--json"]) == 0
     report = json.loads(capsys.readouterr().out)
@@ -154,7 +154,7 @@ def test_cli_only_corners_replaces_old_holes_and_reports_settings(
 
 
 def test_only_corners_option_resolution():
-    assert resolve_options("rebuilt-screws", only_corners=True) == BaseOptions(
+    assert resolve_options("rebuilt", screws=True, only_corners=True) == BaseOptions(
         magnets="side", screws=True, only_corners=True
     )
     assert resolve_options("press-fit", only_corners=True).crush_ribs is True
