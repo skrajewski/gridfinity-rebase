@@ -76,30 +76,6 @@ The default preset is `plain`. Select another preset or change individual settin
 - `--only-corners`: limit magnet pockets and 3 mm screw bores to the four outer corners of the whole bin, regardless of grid size. A 1×1 bin keeps all four holes. Central `--thumbscrew` holes still appear in every foot.
 - `--thumbscrew` / `--no-thumbscrew`: enable or disable the central threaded hole.
 
-Explicit flags override the preset. Omitted flags keep its settings.
-For example, `--preset press-fit --no-crush-ribs` produces smooth bottom-loading
-magnet pockets, matching `magnet-holes`. `--magnets bottom` alone produces
-smooth 6.5 × 2.4 mm pockets. Add `--crush-ribs` for a press fit.
-Ribs require bottom-loading pockets.
-Changing a preset's magnet style to `none` or `side` clears inherited ribs.
-
-Side-loading pockets in `rebuilt`, `refined` and `--magnets side` are
-5.86 mm wide and 2.1 mm high. These dimensions match the measured generator
-reference for 2 mm thick magnets. Use `--side-pocket-height 1.9` to request the
-previous upstream height.
-
-`--only-corners` changes placement without enabling magnets or screws by itself.
-Its output filename ends with `-only-corners.stl`, for example,
-`bin-rebased-magnets-side-screws-only-corners.stl`.
-
-Add `--thumbscrew` with or without a preset to create a central M15x1.5 threaded
-hole in every foot. The hole matches Rebuilt's 4.75 mm depth and clearance.
-The CLI preserves the solid bridge above the foot. You need a compatible
-baseplate and thumbscrew to use the thread.
-
-Donor bases retain their own geometry. The CLI rejects all explicit geometry
-flags with `--base`, including flags that disable an option.
-
 ### Examples with geometry options
 
 Add flags to a preset to combine magnet pockets, screws and central threads,
