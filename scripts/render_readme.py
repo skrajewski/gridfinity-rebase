@@ -213,21 +213,21 @@ def main():
         return
     variants = [
         ("plain", resolve_options("plain")),
+        ("magnet-holes", resolve_options("magnet-holes")),
         ("rebuilt", resolve_options("rebuilt")),
-        ("rebuilt-screws", resolve_options("rebuilt-screws")),
         ("press-fit", resolve_options("press-fit")),
+        ("rebuilt-screws", resolve_options("rebuilt", screws=True)),
         ("screws", BaseOptions(screws=True)),
-        ("magnets-bottom", BaseOptions(magnets="bottom")),
         ("press-fit-screws", resolve_options("press-fit", screws=True)),
         ("rebuilt-thumbscrew", resolve_options("rebuilt", thumbscrew=True)),
         ("rebuilt-only-corners", resolve_options("rebuilt", only_corners=True)),
         (
             "rebuilt-screws-thumbscrew",
-            resolve_options("rebuilt-screws", thumbscrew=True),
+            resolve_options("rebuilt", screws=True, thumbscrew=True),
         ),
         (
             "rebuilt-screws-thumbscrew-only-corners",
-            resolve_options("rebuilt-screws", thumbscrew=True, only_corners=True),
+            resolve_options("rebuilt", screws=True, thumbscrew=True, only_corners=True),
         ),
     ]
     solids = {}
@@ -242,7 +242,7 @@ def main():
             "rebuilt",
             {"azimuth": 20, "elevation": -24, "target": (37, 55, 1.5), "span": 26},
         ),
-        ("magnets-bottom", "magnets-bottom", {"target": (34, 55, 0.7), "span": 13}),
+        ("magnet-holes", "magnet-holes", {"target": (34, 55, 0.7), "span": 13}),
         ("crush-ribs", "press-fit", {"target": (34, 55, 0.7), "span": 13}),
         ("thumbscrew", "rebuilt-thumbscrew", {"target": (21, 42, 1.0), "span": 23}),
     ]
