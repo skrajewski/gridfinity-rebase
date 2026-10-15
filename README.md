@@ -6,13 +6,47 @@ CLI for replacing Gridfinity bin bases with configurable presets or a base copie
 
 ## Install
 
-Install Python 3.10+ and [uv](https://docs.astral.sh/uv/), then run this command from the repository:
+Available on [PyPI as `gridfinity-rebase`](https://pypi.org/project/gridfinity-rebase/).
+Requires Python 3.10+.
+
+### With uv
+
+Use [uv](https://docs.astral.sh/uv/) to run the CLI without installing it permanently:
+
+```sh
+uvx gridfinity-rebase bin.stl --preset magnet-holes
+```
+
+Or install it as a command available from any directory:
+
+```sh
+uv tool install gridfinity-rebase
+gridfinity-rebase bin.stl --preset magnet-holes
+```
+
+### With pip
+
+Create and activate a virtual environment, then install the package:
+
+```sh
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install gridfinity-rebase
+gridfinity-rebase bin.stl --preset magnet-holes
+```
+
+### From source
+
+To install a local checkout, run this command from the repository root:
 
 ```sh
 uv tool install .
 ```
 
 ## Usage
+
+> [!IMPORTANT]
+> I tested this CLI tool **only** on macOS machine.
 
 Pass an STL file to replace its base. You can also use the explicit
 `gridfinity-rebase rebase` subcommand. Run `gridfinity-rebase` without arguments
@@ -129,7 +163,7 @@ for JSON output and environment details.
 
 ## AI Disclosure
 
-Szymon here. I use AI to build this tool.
+Szymon here. I used AI to build this tool.
 
 I needed a way for quick replacement of base of custom Grdifnity bins downloaded from Internet, but I didn't want to spend too much of my free time on this. I collaborated with the AI, describing how it should work, how I want to use it and what's the important from the both code perspective and end-user perspective. It allowed me to iterate and create something that is exactly what I needed. Now I share it with you.
 
