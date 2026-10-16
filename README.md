@@ -165,7 +165,7 @@ for JSON output and environment details.
 
 Szymon here. I used AI to build this tool.
 
-I needed a way for quick replacement of base of custom Grdifnity bins downloaded from Internet, but I didn't want to spend too much of my free time on this. I collaborated with the AI, describing how it should work, how I want to use it and what's the important from the both code perspective and end-user perspective. It allowed me to iterate and create something that is exactly what I needed. Now I share it with you.
+I needed a way to quickly replace the base of custom Gridfinity bins downloaded from the Internet, but I didn't want to spend too much of my free time on this. I collaborated with the AI, describing how it should work, how I want to use it and what's the important from the both code perspective and end-user perspective. It allowed me to iterate and create something that is exactly what I needed. Now I share it with you.
 
 Just want you to know.
 
