@@ -28,4 +28,4 @@ dev = [
 testpaths = ["tests"]
 
 [tool.uv.build-backend]
-source-include = ["tests/**", "docs/**", "scripts/**", "uv.lock"]
+source-include = ["tests/**", "scripts/**", "uv.lock"]
