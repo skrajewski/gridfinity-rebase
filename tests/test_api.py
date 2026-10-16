@@ -61,6 +61,7 @@ def test_reuse_model_without_io_or_mutation(tmp_path, monkeypatch, capsys):
     assert results[0].report.geometry == BaseOptions()
     assert results[1].report.geometry == BaseOptions(magnets="side", screws=True)
     assert results[0].report.base_height_mode == "auto"
+    assert results[0].report.warnings == ()
     assert results[0].report.inspection == info
     assert results[0].report.triangles == results[0].model.triangles
     json.dumps(results[0].report.describe())
@@ -146,20 +147,26 @@ def test_donor_alignment_and_body_preservation(tmp_path, donor_size, height):
         np.testing.assert_array_equal(actual, original)
 
 
-def test_custom_model_inspection_and_manual_override():
+def test_custom_model_inspection_fallback_and_manual_override(capsys):
     model = load_stl(FIXTURES / "test.stl")
     info = inspect_model(model)
     assert not info.standard_bin
     assert info.recommended_base_height_mm is None
     assert info.base_detection_error_code == "unrecognized_base"
-    with pytest.raises(RebaseError) as failure:
-        rebase(model, base=GeneratedBase())
-    assert failure.value.code == "unrecognized_base"
+    fallback = rebase(model, base=GeneratedBase())
+    assert fallback.report.base_height_mm == 4.75
+    assert fallback.report.base_height_mode == "auto"
+    assert fallback.report.inspection == info
+    assert len(fallback.report.warnings) == 1
+    assert "4.75 mm" in fallback.report.warnings[0]
+    assert fallback.report.describe()["warnings"] == list(fallback.report.warnings)
     result = rebase(model, base=GeneratedBase(), base_height_mm=4.75)
     assert result.report.base_height_mm == 4.75
     assert result.report.base_height_mode == "manual"
     assert result.report.inspection is None
+    assert result.report.warnings == ()
     assert "standard_bin" not in result.report.describe()
+    assert capsys.readouterr() == ("", "")
 
 
 @pytest.mark.parametrize("height", [4.7, float("nan"), float("inf"), "7", False])

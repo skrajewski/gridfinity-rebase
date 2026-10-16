@@ -18,6 +18,7 @@ from numpy.typing import NDArray
 
 from .errors import RebaseError
 from .geometry import (
+    PROFILE_HEIGHT,
     Grid,
     detect_grid,
     detect_standard_base,
@@ -167,6 +168,7 @@ class RebaseReport:
     triangles: int
     elapsed_ms: float
     inspection: Inspection | None
+    warnings: tuple[str, ...] = ()
 
     def describe(self) -> dict:
         report = self.inspection.describe() if self.inspection is not None else {}
@@ -179,6 +181,7 @@ class RebaseReport:
             thumbscrew=self.geometry.thumbscrew if self.geometry is not None else None,
             triangles=self.triangles,
             elapsed_ms=self.elapsed_ms,
+            warnings=list(self.warnings),
         )
         return report
 
@@ -268,9 +271,11 @@ def rebase(
 ) -> RebaseResult:
     """Return a new model, preserving the input above the validated cut.
 
-    None selects automatic standard-base detection. An explicit height is
-    measured from the bottom of the feet, not from absolute Z=0. Donor bases
-    must match the grid, match after rotation, or be 1x1 for tiling.
+    None selects automatic standard-base detection, falling back to replacing
+    only the 4.75 mm foot profile with a report warning for custom bases.
+    An explicit height is measured from the bottom of the feet, not from
+    absolute Z=0. Donor bases must match the grid, match after rotation, or
+    be 1x1 for tiling.
 
     Callbacks run synchronously on the calling thread. Their exceptions
     propagate unchanged; callers are responsible for dispatching GUI updates.
@@ -288,16 +293,23 @@ def rebase(
     _notify(on_progress, "detecting_grid")
     grid = _grid(model)
     info = None
+    warnings = ()
     if base_height_mm is None:
         _notify(on_progress, "detecting_base")
         info = _inspect(model, grid)
-        if not info.standard_bin:
-            raise RebaseError(
-                info.base_detection_error or "Standard base not recognized",
-                code="unrecognized_base",
+        if info.standard_bin:
+            height = info.recommended_base_height_mm
+            assert height is not None
+        else:
+            height = PROFILE_HEIGHT
+            warnings = (
+                (
+                    "Standard bin base not recognized; replacing only the bottom "
+                    f"{PROFILE_HEIGHT:g} mm foot profile. Geometry above the cut, "
+                    "including any old holes, is preserved; check the result in "
+                    "a slicer. Use --base-height to choose a different cut height."
+                ),
             )
-        height = info.recommended_base_height_mm
-        assert height is not None
     else:
         height = float(base_height_mm)
     with _geometry_errors("invalid_height", base_height_mm=height):
@@ -315,7 +327,7 @@ def rebase(
                 base.model._solid,
                 str(base.model.source) if base.model.source else "Donor",
             )
-            if base_height_mm is None:
+            if base_height_mm is None and height > PROFILE_HEIGHT:
                 donor_standard = detect_standard_base(
                     base.model._solid,
                     donor_grid,
@@ -347,6 +359,7 @@ def rebase(
             triangles=solid.num_tri(),
             elapsed_ms=round((perf_counter() - start) * 1000, 2),
             inspection=info,
+            warnings=warnings,
         ),
     )
     _notify(on_progress, "complete")

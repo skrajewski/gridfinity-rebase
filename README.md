@@ -141,10 +141,10 @@ See [curve resolution](docs/segments.md) for `--segments` settings and visual co
 ## Key details
 
 - The CLI supports standard rectangular Gridfinity bins on a 42 mm grid. Use millimeters for STL units, with feet at the bottom and Z pointing up.
-- The CLI detects the base and cut height. It preserves the bin interior and geometry above the cut, and rejects invalid meshes, incompatible bases and ambiguous models.
+- The CLI detects the base and cut height. If the feet are valid Gridfinity but the full base is not recognized, it replaces only the bottom 4.75 mm foot profile and prints a warning. Geometry above the cut is preserved, including any old holes. Check these results in a slicer. Invalid meshes, incompatible seams and disconnected replacement feet still fail validation.
 - A donor base can match the input grid or have its X/Y dimensions swapped. The CLI can also tile a 1×1 donor base across the input.
 - Unmodified presets write to `bin-rebased-PRESET.stl`. `--thumbscrew` and `--only-corners` append their names to the filename. Modified settings use a descriptive suffix, such as `bin-rebased-magnets-bottom-crush-ribs-screws.stl`. Donor bases use `bin-rebased.stl`. Use `-o` to choose a filename and `--overwrite` to replace an existing output.
-- JSON reports include the resolved `geometry` settings. `base` identifies the starting preset or donor path. The default preset is `plain`. For donor bases, `geometry` is `null`.
+- JSON reports include the resolved `geometry` settings and a `warnings` array (empty when there are no warnings). With `--json`, warnings are included in the report instead of printed to stderr. `base_height_mode` is `auto` when the program chooses the cut height, or `manual` when `--base-height` is supplied. Automatic 4.75 mm foot replacement includes a warning. `base` identifies the starting preset or donor path. The default preset is `plain`. For donor bases, `geometry` is `null`.
 - `--base-height MM` overrides automatic detection for custom models and replaces everything below that height. The minimum is 4.75 mm.
 
 Run `gridfinity-rebase --help` for all options.

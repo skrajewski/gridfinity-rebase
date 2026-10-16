@@ -237,7 +237,7 @@ def parser():
         type=float,
         default=None,
         metavar="MM",
-        help="Manual cut height in mm (default: automatic)",
+        help="Manual cut height in mm (default: automatic, or 4.75 mm with a warning for custom bases)",
     )
     add_help(rebase)
     add_help(p, version=True)
@@ -347,13 +347,16 @@ def main(argv=None):
                 triangles=triangles,
             )
         report["elapsed_ms"] = round((perf_counter() - start) * 1000, 2)
+        if not args.json:
+            for warning in report.get("warnings", []):
+                print(f"Warning: {warning}", file=sys.stderr)
         if args.json:
             print(json.dumps(report))
         elif args.command == "inspect":
             detail = (
                 f"standard bin, base cut {report['recommended_base_height_mm']:g} mm"
                 if report["standard_bin"]
-                else "custom model; explicit --base-height required"
+                else "custom model; rebase uses a 4.75 mm cut with a warning"
             )
             nx, ny = report["grid"]
             print(
