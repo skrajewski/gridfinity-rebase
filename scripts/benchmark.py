@@ -16,14 +16,15 @@ from time import perf_counter
 
 import manifold3d as m
 
-from gridfinity_rebase.geometry import (
-    Grid,
-    detect_grid,
-    detect_standard_base,
-    donor_base,
-    replace_base,
-    validate_height,
+from gridfinity_rebase import (
+    DonorBase,
+    GeneratedBase,
+    load_stl,
+    rebase,
+    resolve_options,
+    save_stl,
 )
+from gridfinity_rebase.geometry import Grid
 from gridfinity_rebase.presets import preset_base, rounded_prism
 from gridfinity_rebase.stl import read_stl, write_stl
 
@@ -42,19 +43,13 @@ def synthetic_bin(nx, ny):
 
 
 def run_engine(source, option, output):
-    solid = read_stl(source)
-    grid = detect_grid(solid)
-    height = detect_standard_base(solid, grid).height
-    validate_height(solid, grid, height)
+    model = load_stl(source)
     if option[0] == "--preset":
-        base = preset_base(option[1], grid, height, segments=SEGMENTS)
+        base = GeneratedBase(resolve_options(option[1]), segments=SEGMENTS)
     else:
-        other = read_stl(option[1])
-        donor_grid = detect_grid(other)
-        assert detect_standard_base(other, donor_grid).height >= height
-        base = donor_base(other, donor_grid, grid, height)
-    result = replace_base(solid, base, grid, height)
-    write_stl(result, output, overwrite=True)
+        base = DonorBase(load_stl(option[1]))
+    result = rebase(model, base=base)
+    save_stl(result.model, output, overwrite=True)
 
 
 def main():

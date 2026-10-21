@@ -141,10 +141,12 @@ See [curve resolution](docs/segments.md) for `--segments` settings and visual co
 ## Key details
 
 - The CLI supports standard rectangular Gridfinity bins on a 42 mm grid. Use millimeters for STL units, with feet at the bottom and Z pointing up.
+- Any rotation around Z is detected automatically, including for a separately rotated donor. Processing uses a common local frame: feet aligned with X/Y, the first foot centered at X=Y=0, and the underside at Z=0. The result returns to the input's original position and rotation. Models lying on their side or upside down are not automatically reoriented.
 - The CLI detects the base and cut height. If the feet are valid Gridfinity but the full base is not recognized, it replaces only the bottom 4.75 mm foot profile and prints a warning. Geometry above the cut is preserved, including any old holes. Check these results in a slicer. Invalid meshes, incompatible seams and disconnected replacement feet still fail validation.
 - A donor base can match the input grid or have its X/Y dimensions swapped. The CLI can also tile a 1×1 donor base across the input.
 - Unmodified presets write to `bin-rebased-PRESET.stl`. `--thumbscrew` and `--only-corners` append their names to the filename. Modified settings use a descriptive suffix, such as `bin-rebased-magnets-bottom-crush-ribs-screws.stl`. Donor bases use `bin-rebased.stl`. Use `-o` to choose a filename and `--overwrite` to replace an existing output.
 - JSON reports include the resolved `geometry` settings and a `warnings` array (empty when there are no warnings). With `--json`, warnings are included in the report instead of printed to stderr. `base_height_mode` is `auto` when the program chooses the cut height, or `manual` when `--base-height` is supplied. Automatic 4.75 mm foot replacement includes a warning. `base` identifies the starting preset or donor path. The default preset is `plain`. For donor bases, `geometry` is `null`.
+- Inspection and rebase reports include `rotation_z_deg`, the local grid's rotation in the source coordinates, and `origin_mm`, its first foot's center at underside height in those same coordinates. Square feet determine rotation modulo 90°; the reported angle is in [-45°, 45°), so equivalent orientations can swap the reported grid's X/Y dimensions. Reported cut heights remain relative to the underside.
 - `--base-height MM` overrides automatic detection for custom models and replaces everything below that height. The minimum is 4.75 mm.
 
 Run `gridfinity-rebase --help` for all options.

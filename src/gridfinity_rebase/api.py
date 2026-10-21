@@ -1,6 +1,8 @@
 """In-memory orchestration shared by CLI and other clients.
 
 All coordinates and heights are millimetres, with feet down and Z pointing up.
+Operations normalize Z rotation and translation internally; meshes and report
+origins retain source coordinates. Cut heights are relative to the underside.
 Functions are synchronous and never print or write files implicitly.
 """
 
@@ -19,10 +21,10 @@ from numpy.typing import NDArray
 from .errors import RebaseError
 from .geometry import (
     PROFILE_HEIGHT,
-    Grid,
-    detect_grid,
+    NormalizedModel,
     detect_standard_base,
     donor_base,
+    normalize_model,
     replace_base,
     validate_height,
 )
@@ -71,7 +73,11 @@ class Model:
 
 @dataclass(frozen=True)
 class Inspection:
-    """Grid and standard-base detection; an unrecognized base is non-fatal."""
+    """Grid and base detection; an unrecognized base is non-fatal.
+
+    origin_mm and rotation_z_deg map the normalized grid back to source
+    coordinates. Rotation is modulo 90 degrees, in [-45, 45).
+    """
 
     grid: tuple[int, int]
     origin_mm: tuple[float, float, float]
@@ -82,12 +88,14 @@ class Inspection:
     nominal_base_height_mm: float | None = None
     base_detection_error: str | None = None
     base_detection_error_code: str | None = None
+    rotation_z_deg: float = 0.0
 
     def describe(self) -> dict:
         """Return a JSON-ready report, compatible with CLI inspection fields."""
         report = {
             "grid": list(self.grid),
             "origin_mm": list(self.origin_mm),
+            "rotation_z_deg": self.rotation_z_deg,
             "triangles": self.triangles,
             "standard_bin": self.standard_bin,
         }
@@ -169,12 +177,14 @@ class RebaseReport:
     elapsed_ms: float
     inspection: Inspection | None
     warnings: tuple[str, ...] = ()
+    rotation_z_deg: float = 0.0
 
     def describe(self) -> dict:
         report = self.inspection.describe() if self.inspection is not None else {}
         report.update(
             grid=list(self.grid),
             origin_mm=list(self.origin_mm),
+            rotation_z_deg=self.rotation_z_deg,
             base_height_mm=self.base_height_mm,
             base_height_mode=self.base_height_mode,
             geometry=self.geometry.describe() if self.geometry is not None else None,
@@ -215,21 +225,25 @@ def _require_model(model: Model) -> None:
         raise RebaseError("Expected a Model from load_stl()", code="invalid_model")
 
 
-def _grid(model: Model) -> Grid:
+def _normalize(model: Model) -> NormalizedModel:
     with _geometry_errors("invalid_grid"):
-        return detect_grid(model._solid, str(model.source) if model.source else "Model")
+        return normalize_model(
+            model._solid, str(model.source) if model.source else "Model"
+        )
 
 
-def _inspect(model: Model, grid: Grid) -> Inspection:
+def _inspect(model: Model, normalized: NormalizedModel) -> Inspection:
+    grid = normalized.grid
     fields = {
         "grid": (grid.nx, grid.ny),
-        "origin_mm": (grid.x, grid.y, grid.z),
+        "origin_mm": normalized.frame.origin_mm,
+        "rotation_z_deg": normalized.frame.rotation_z_deg,
         "triangles": model.triangles,
     }
     try:
         with _geometry_errors("unrecognized_base"):
             standard = detect_standard_base(
-                model._solid, grid, str(model.source) if model.source else "Model"
+                normalized.solid, grid, str(model.source) if model.source else "Model"
             )
     except RebaseError as exc:
         if exc.code != "unrecognized_base":
@@ -255,9 +269,9 @@ def inspect_model(
     """Detect the grid and base; invalid grids raise, custom bases are reported."""
     _require_model(model)
     _notify(on_progress, "detecting_grid")
-    grid = _grid(model)
+    normalized = _normalize(model)
     _notify(on_progress, "detecting_base")
-    info = _inspect(model, grid)
+    info = _inspect(model, normalized)
     _notify(on_progress, "complete")
     return info
 
@@ -277,6 +291,9 @@ def rebase(
     absolute Z=0. Donor bases must match the grid, match after rotation, or
     be 1x1 for tiling.
 
+    Target and donor are normalized independently before geometry operations.
+    The returned model retains the target's original position and Z rotation.
+
     Callbacks run synchronously on the calling thread. Their exceptions
     propagate unchanged; callers are responsible for dispatching GUI updates.
     """
@@ -291,12 +308,13 @@ def rebase(
     ):
         raise RebaseError("Base height must be numeric", code="invalid_height")
     _notify(on_progress, "detecting_grid")
-    grid = _grid(model)
+    normalized = _normalize(model)
+    grid = normalized.grid
     info = None
     warnings = ()
     if base_height_mm is None:
         _notify(on_progress, "detecting_base")
-        info = _inspect(model, grid)
+        info = _inspect(model, normalized)
         if info.standard_bin:
             height = info.recommended_base_height_mm
             assert height is not None
@@ -313,7 +331,7 @@ def rebase(
     else:
         height = float(base_height_mm)
     with _geometry_errors("invalid_height", base_height_mm=height):
-        validate_height(model._solid, grid, height)
+        validate_height(normalized.solid, grid, height)
 
     if isinstance(base, GeneratedBase):
         _notify(on_progress, "generating_base")
@@ -323,14 +341,14 @@ def rebase(
     else:
         _notify(on_progress, "preparing_donor")
         with _geometry_errors("incompatible_donor"):
-            donor_grid = detect_grid(
+            donor = normalize_model(
                 base.model._solid,
                 str(base.model.source) if base.model.source else "Donor",
             )
             if base_height_mm is None and height > PROFILE_HEIGHT:
                 donor_standard = detect_standard_base(
-                    base.model._solid,
-                    donor_grid,
+                    donor.solid,
+                    donor.grid,
                     str(base.model.source) if base.model.source else "Donor",
                 )
                 if donor_standard.height < height - 0.001:
@@ -342,17 +360,20 @@ def rebase(
                             "base_height_mm": height,
                         },
                     )
-            replacement = donor_base(base.model._solid, donor_grid, grid, height)
+            replacement = donor_base(donor.solid, donor.grid, grid, height)
         geometry = None
 
     _notify(on_progress, "replacing_base")
     with _geometry_errors("replacement_failed"):
-        solid = replace_base(model._solid, replacement, grid, height)
+        solid = normalized.frame.to_source(
+            replace_base(normalized.solid, replacement, grid, height)
+        )
     result = RebaseResult(
         model=Model._from_solid(solid),
         report=RebaseReport(
             grid=(grid.nx, grid.ny),
-            origin_mm=(grid.x, grid.y, grid.z),
+            origin_mm=normalized.frame.origin_mm,
+            rotation_z_deg=normalized.frame.rotation_z_deg,
             base_height_mm=height,
             base_height_mode="auto" if base_height_mm is None else "manual",
             geometry=geometry,

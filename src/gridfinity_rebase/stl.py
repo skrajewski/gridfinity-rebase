@@ -85,10 +85,32 @@ def write_stl(solid: m.Manifold, path: str | Path, *, overwrite: bool = False) -
     mesh = quantized.to_mesh()
     triangles = np.asarray(mesh.vert_properties)[:, :3][mesh.tri_verts]
     normals = np.cross(
-        triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0]
+        np.subtract(triangles[:, 1], triangles[:, 0], dtype=np.float64),
+        np.subtract(triangles[:, 2], triangles[:, 0], dtype=np.float64),
     )
+    if np.any(np.all(normals == 0, axis=1)):
+        # Float32 can make a previously non-collinear triangle flat. Only
+        # in that case simplify at the engine's existing tolerance; leave
+        # ordinary exports alone and never raise tolerance to force a repair.
+        # STL has no face ancestry; clearing boolean face boundaries lets
+        # the engine collapse flat triangles across those boundaries too.
+        quantized = quantized.as_original().simplify(0)
+        if quantized.status() != m.Error.NoError or quantized.is_empty():
+            raise RebaseError(
+                "Cannot collapse degenerate float32 STL faces", code="export_failed"
+            )
+        mesh = quantized.to_mesh()
+        triangles = np.asarray(mesh.vert_properties)[:, :3][mesh.tri_verts]
+        normals = np.cross(
+            np.subtract(triangles[:, 1], triangles[:, 0], dtype=np.float64),
+            np.subtract(triangles[:, 2], triangles[:, 0], dtype=np.float64),
+        )
     lengths = np.linalg.norm(normals, axis=1)
-    normals /= np.where(lengths > 0, lengths, 1)[:, None]
+    if np.any(lengths == 0):
+        raise RebaseError(
+            "Cannot export degenerate float32 STL faces", code="export_failed"
+        )
+    normals /= lengths[:, None]
     records = np.zeros(len(triangles), dtype=FACET)
     records["vertices"] = triangles
     records["normal"] = normals

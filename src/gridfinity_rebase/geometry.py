@@ -92,7 +92,7 @@ def detect_grid(solid: m.Manifold, label="Model", tolerance=0.35) -> Grid:
         raise RebaseError(
             f"{label}: unsupported Gridfinity footprint: expected a complete rectangular grid"
         )
-    expected_centres = sorted(map(tuple, centres))
+    expected_centres = dict(zip(map(tuple, lattice), centres))
     # Bounds alone would accept an ordinary 41.5 mm box or a baseplate.
     for height, width in [(0.3, 36.2), (1.4, 37.2), (3.5, 39.0), (4.6, 41.2)]:
         sections = outer_boxes(solid, z + height)
@@ -100,15 +100,20 @@ def detect_grid(solid: m.Manifold, label="Model", tolerance=0.35) -> Grid:
             raise RebaseError(
                 f"{label}: not Gridfinity: unexpected foot sections at Z+{height:g} mm"
             )
-        sections.sort(key=lambda box: tuple((box[0] + box[1]) / 2))
-        for (low, high), centre in zip(sections, expected_centres):
+        seen = set()
+        for low, high in sections:
+            centre = (low + high) / 2
+            cell = tuple(np.rint((centre - origin) / PITCH).astype(int))
             if (
-                np.max(np.abs(high - low - width)) > tolerance
-                or np.max(np.abs((low + high) / 2 - centre)) > tolerance
+                cell not in expected_centres
+                or cell in seen
+                or np.max(np.abs(high - low - width)) > tolerance
+                or np.max(np.abs(centre - expected_centres[cell])) > tolerance
             ):
                 raise RebaseError(
                     f"{label}: not Gridfinity: incorrect chamfer/profile at Z+{height:g} mm; expected {width:g} mm feet (mm, Z up)"
                 )
+            seen.add(cell)
         filled = m.CrossSection(
             [p for p in solid.slice(z + height).to_polygons() if signed_area(p) > 0]
         )
@@ -118,6 +123,99 @@ def detect_grid(solid: m.Manifold, label="Model", tolerance=0.35) -> Grid:
                 f"{label}: not Gridfinity: feet do not have compatible rounded corners at Z+{height:g} mm"
             )
     return Grid(nx, ny, float(origin[0]), float(origin[1]), float(z))
+
+
+@dataclass(frozen=True)
+class ModelFrame:
+    """Rigid XY frame: first foot at the origin, underside at Z=0.
+
+    rotation_z_deg maps the local +X direction to the source coordinates.
+    Square feet only determine orientation modulo 90 degrees; use [-45, 45).
+    """
+
+    origin_mm: tuple[float, float, float]
+    rotation_z_deg: float
+
+    def to_local(self, solid: m.Manifold) -> m.Manifold:
+        return solid.translate(tuple(-v for v in self.origin_mm)).rotate(
+            (0, 0, -self.rotation_z_deg)
+        )
+
+    def to_source(self, solid: m.Manifold) -> m.Manifold:
+        return solid.rotate((0, 0, self.rotation_z_deg)).translate(self.origin_mm)
+
+
+@dataclass(frozen=True)
+class NormalizedModel:
+    """Validated Gridfinity geometry in a common frame for all operations."""
+
+    solid: m.Manifold
+    grid: Grid
+    frame: ModelFrame
+
+
+def _foot_rotation(solid: m.Manifold, label: str) -> float:
+    # Simplification removes collinear slice/triangulation vertices before
+    # measuring edges. Use only outer contours, never hardware holes or the
+    # body's principal axes (which need not follow the feet).
+    polygons = [
+        np.asarray(p)
+        for p in solid.slice(1.4).simplify(0.0001).to_polygons()
+        if signed_area(p) > 1
+    ]
+    if not polygons:
+        raise RebaseError(
+            f"{label}: not Gridfinity: no feet found (use millimetres, Z up)"
+        )
+    edges = np.concatenate([np.roll(p, -1, axis=0) - p for p in polygons])
+    lengths = np.linalg.norm(edges, axis=1)
+    # Straight sides dominate a foot; short rounded-corner segments should
+    # not bias the estimate. Opposite/perpendicular sides share one phase
+    # after multiplying their angles by four.
+    longest = lengths >= lengths.max() * 0.5
+    angles = np.arctan2(edges[longest, 1], edges[longest, 0])
+    direction = np.sum(lengths[longest] * np.exp(4j * angles))
+    angle = (float(np.degrees(np.angle(direction)) / 4) + 45) % 90 - 45
+    # Stabilize the symmetric boundaries against float32 STL roundoff.
+    if abs(angle) < 0.00001:
+        return 0.0
+    if abs(abs(angle) - 45) < 0.00001:
+        return -45.0
+    return angle
+
+
+def normalize_model(solid: m.Manifold, label="Model") -> NormalizedModel:
+    """Recover a Z rotation, validate the feet, and move to a local frame.
+
+    No scaling, mirroring or X/Y rotations are inferred. Angle estimation is
+    only a hypothesis: the full lattice and mating-profile checks must pass.
+    Centre before measuring to keep calculations independent of source offset.
+    """
+    bounds = solid.bounding_box()
+    if bounds[5] - bounds[2] < PROFILE_HEIGHT - 0.05:
+        raise RebaseError(
+            f"{label}: not Gridfinity: shorter than the 4.75 mm foot profile"
+        )
+    pivot = np.array(
+        [(bounds[0] + bounds[3]) / 2, (bounds[1] + bounds[4]) / 2, bounds[2]]
+    )
+    centred = solid.translate(tuple(-pivot))
+    angle = _foot_rotation(centred, label)
+    aligned = centred.rotate((0, 0, -angle))
+    detected = detect_grid(aligned, label)
+    origin = np.array([detected.x, detected.y, 0.0])
+    radians = np.radians(angle)
+    source_origin = (
+        origin[0] * np.cos(radians) - origin[1] * np.sin(radians) + pivot[0],
+        origin[0] * np.sin(radians) + origin[1] * np.cos(radians) + pivot[1],
+        pivot[2],
+    )
+    frame = ModelFrame(tuple(float(v) for v in source_origin), angle)
+    return NormalizedModel(
+        aligned.translate(tuple(-origin)),
+        Grid(detected.nx, detected.ny, 0.0, 0.0, 0.0),
+        frame,
+    )
 
 
 def lower(solid, height):
@@ -244,8 +342,19 @@ def donor_base(solid, donor: Grid, target: Grid, height: float):
         # Tile feet and hardware cutouts, then join them with a continuous
         # standard bridge; copying whole 1x1 tiles would leave 0.5 mm slots.
         feet = lower(base, PROFILE_HEIGHT)
-        donor_envelope = rounded_prism(41.5, 41.5, 3.75, PROFILE_HEIGHT, height)
-        cutouts = donor_envelope - base.trim_by_plane((0, 0, 1), PROFILE_HEIGHT)
+        donor_bridge = base.trim_by_plane((0, 0, 1), PROFILE_HEIGHT)
+        # Derive the envelope from the donor's own vertices. Subtracting a
+        # separately tessellated nominal outline also copies tiny exterior
+        # slivers caused by STL quantization/rotation as if they were holes.
+        cutouts = donor_bridge.hull() - donor_bridge
+        holes = []
+        for part in cutouts.decompose():
+            points = np.asarray(part.to_mesh64().vert_properties)[:, :3]
+            # Hull subtraction can leave exactly coplanar shells in any
+            # direction. Keep every volumetric part, regardless of its size.
+            if np.linalg.matrix_rank(points - points[0]) == 3:
+                holes.append(part)
+        cutouts = m.Manifold.batch_boolean(holes, m.OpType.Add)
         bridge = rounded_prism(
             target.nx * PITCH - 0.5,
             target.ny * PITCH - 0.5,
